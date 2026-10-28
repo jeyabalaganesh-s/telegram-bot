@@ -47,6 +47,10 @@ class TelegramMessage(models.Model):
         null=True,
         blank=True,
     )
+    
+    media_type = models.CharField(max_length=20, default="text")
+    telegram_file_id = models.CharField(max_length=512, blank=True, default="")
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

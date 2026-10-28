@@ -2,6 +2,7 @@
 import json
 import hmac
 import logging
+import mimetypes
 import requests
 
 from asgiref.sync import async_to_sync
@@ -9,8 +10,9 @@ from channels.layers import get_channel_layer
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, get_object_or_404
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
@@ -18,6 +20,95 @@ from .models import TelegramConversation, TelegramMessage
 
 
 logger = logging.getLogger(__name__)
+
+
+# ==============================
+# Helpers
+# ==============================
+
+def extract_message_content(message):
+    """Extract text, caption, media type and Telegram file ID."""
+
+    text = message.get("text") or message.get("caption") or ""
+    media_type = "text"
+    file_id = ""
+
+    if message.get("photo"):
+        media_type = "photo"
+        # Telegram provides several sizes; use the largest available.
+        file_id = message["photo"][-1]["file_id"]
+
+    elif message.get("video"):
+        media_type = "video"
+        file_id = message["video"]["file_id"]
+
+    elif message.get("animation"):
+        media_type = "animation"
+        file_id = message["animation"]["file_id"]
+
+    elif message.get("document"):
+        media_type = "document"
+        file_id = message["document"]["file_id"]
+
+    elif message.get("audio"):
+        media_type = "audio"
+        file_id = message["audio"]["file_id"]
+
+    elif message.get("voice"):
+        media_type = "voice"
+        file_id = message["voice"]["file_id"]
+
+    elif message.get("video_note"):
+        media_type = "video_note"
+        file_id = message["video_note"]["file_id"]
+
+    elif message.get("sticker"):
+        media_type = "sticker"
+        file_id = message["sticker"]["file_id"]
+
+    return text, media_type, file_id
+
+
+def broadcast_message(saved_message):
+    """Broadcast a saved message to connected WebSocket clients."""
+
+    channel_layer = get_channel_layer()
+
+    if channel_layer is None:
+        return
+
+    conversation = saved_message.conversation
+
+    event_data = {
+        "id": saved_message.id,
+        "chat_id": conversation.chat_id,
+        "username": conversation.username,
+        "first_name": conversation.first_name,
+        "text": saved_message.text,
+        "direction": saved_message.direction,
+        "media_type": saved_message.media_type,
+        "created_at": saved_message.created_at.isoformat(),
+    }
+
+    if saved_message.telegram_file_id:
+        event_data["media_url"] = reverse(
+            "telegram_media",
+            args=[saved_message.id],
+        )
+
+    try:
+        async_to_sync(channel_layer.group_send)(
+            "telegram_updates",
+            {
+                "type": "telegram_message",
+                "data": event_data,
+            },
+        )
+    except Exception:
+        logger.exception(
+            "Failed to broadcast message %s",
+            saved_message.id,
+        )
 
 
 # ==============================
@@ -36,7 +127,7 @@ def dashboard(request):
 @csrf_exempt
 @require_POST
 def telegram_webhook(request):
-    expected = settings.TELEGRAM_WEBHOOK_SECRET or ""
+    expected = getattr(settings, "TELEGRAM_WEBHOOK_SECRET", "") or ""
     received = request.headers.get(
         "X-Telegram-Bot-Api-Secret-Token", ""
     )
@@ -51,65 +142,158 @@ def telegram_webhook(request):
 
     message = update.get("message") or update.get("channel_post")
 
-    # Some Telegram updates do not contain a message.
     if not message:
         return JsonResponse({"ok": True})
 
     chat = message.get("chat", {})
-    sender = message.get("from", {})
-    chat_id = chat.get("id")
-    text = message.get("text", "")
+    sender = message.get("from") or {}
 
-    # This version stores text messages only.
-    if chat_id is None or not isinstance(text, str) or not text.strip():
+    chat_id = chat.get("id")
+
+    if chat_id is None:
         return JsonResponse({"ok": True})
 
-    # Save the conversation and message before broadcasting.
+    text, media_type, file_id = extract_message_content(message)
+
+    # Ignore unsupported updates, but accept media without captions.
+    if not text.strip() and not file_id:
+        return JsonResponse({"ok": True})
+
     conversation, _ = TelegramConversation.objects.update_or_create(
         chat_id=chat_id,
         defaults={
-            "username": sender.get("username") or chat.get("username", ""),
-            "first_name": sender.get("first_name") or chat.get("first_name", ""),
-            "last_name": sender.get("last_name") or chat.get("last_name", ""),
+            "username": (
+                sender.get("username")
+                or chat.get("username", "")
+            ),
+            "first_name": (
+                sender.get("first_name")
+                or chat.get("first_name", "")
+            ),
+            "last_name": (
+                sender.get("last_name")
+                or chat.get("last_name", "")
+            ),
         },
     )
+
+    # Avoid storing the same Telegram update twice if Telegram retries it.
+    telegram_message_id = message.get("message_id")
+
+    existing = TelegramMessage.objects.filter(
+        conversation=conversation,
+        telegram_message_id=telegram_message_id,
+        direction=TelegramMessage.INCOMING,
+    ).first()
+
+    if existing:
+        return JsonResponse({"ok": True})
 
     saved_message = TelegramMessage.objects.create(
         conversation=conversation,
         direction=TelegramMessage.INCOMING,
         text=text,
-        telegram_message_id=message.get("message_id"),
+        telegram_message_id=telegram_message_id,
+        media_type=media_type,
+        telegram_file_id=file_id,
     )
 
-    # Broadcast the saved message to connected WebSocket clients.
-    channel_layer = get_channel_layer()
+    broadcast_message(saved_message)
 
-    if channel_layer is not None:
-        event_data = {
-            "id": saved_message.id,
-            "chat_id": chat_id,
-            "username": conversation.username,
-            "first_name": conversation.first_name,
-            "text": saved_message.text,
-            "direction": TelegramMessage.INCOMING,
-            "created_at": saved_message.created_at.isoformat(),
-        }
-
-        try:
-            async_to_sync(channel_layer.group_send)(
-                "telegram_updates",
-                {
-                    "type": "telegram_message",
-                    "data": event_data,
-                },
-            )
-        except Exception:
-            # The message is already saved, even if live delivery fails.
-            logger.exception("Failed to broadcast Telegram message")
-
-    logger.info("Saved incoming Telegram message for chat %s", chat_id)
+    logger.info(
+        "Saved incoming %s message for chat %s",
+        media_type,
+        chat_id,
+    )
 
     return JsonResponse({"ok": True})
+
+
+# ==============================
+# Serve media securely
+# ==============================
+
+@login_required(login_url="/accounts/login/")
+def telegram_media(request, message_id):
+    """Retrieve a Telegram file without exposing the bot token to the browser."""
+
+    saved_message = get_object_or_404(
+        TelegramMessage.objects.select_related("conversation"),
+        pk=message_id,
+    )
+
+    file_id = saved_message.telegram_file_id
+
+    if not file_id:
+        return JsonResponse(
+            {"error": "This message has no media file."},
+            status=404,
+        )
+
+    token = getattr(settings, "TELEGRAM_BOT_TOKEN", "")
+
+    if not token:
+        return JsonResponse(
+            {"error": "Telegram bot token is not configured."},
+            status=500,
+        )
+
+    try:
+        # Ask Telegram for the file path.
+        api_response = requests.get(
+            f"https://api.telegram.org/bot{token}/getFile",
+            params={"file_id": file_id},
+            timeout=15,
+        )
+        api_response.raise_for_status()
+        api_result = api_response.json()
+
+        if not api_result.get("ok"):
+            return JsonResponse(
+                {"error": "Telegram could not retrieve this file."},
+                status=502,
+            )
+
+        file_path = api_result["result"]["file_path"]
+
+        # Download through the backend; don't expose the bot token to JS.
+        download_url = (
+            f"https://api.telegram.org/file/bot{token}/{file_path}"
+        )
+
+        file_response = requests.get(
+            download_url,
+            timeout=30,
+        )
+        file_response.raise_for_status()
+
+        content_type = file_response.headers.get("Content-Type")
+
+        if not content_type or content_type == "application/octet-stream":
+            content_type = mimetypes.guess_type(file_path)[0]
+
+        if not content_type:
+            content_type = "application/octet-stream"
+
+        response = HttpResponse(
+            file_response.content,
+            content_type=content_type,
+        )
+        response["Content-Disposition"] = "inline"
+        response["X-Content-Type-Options"] = "nosniff"
+        response["Cache-Control"] = "private, no-store"
+
+        return response
+
+    except (requests.RequestException, ValueError, KeyError):
+        logger.exception(
+            "Failed to retrieve Telegram media for message %s",
+            message_id,
+        )
+        return JsonResponse(
+            {"error": "Could not retrieve media from Telegram."},
+            status=502,
+        )
 
 
 # ==============================
@@ -153,7 +337,7 @@ def telegram_chat(request, chat_id):
 
 
 # ==============================
-# Send Telegram message
+# Send Telegram text message
 # ==============================
 
 @login_required(login_url="/accounts/login/")
@@ -184,7 +368,10 @@ def send_telegram_message(request, chat_id):
 
     if not text or len(text) > 4096:
         return JsonResponse(
-            {"ok": False, "error": "Enter a message of 1–4096 characters."},
+            {
+                "ok": False,
+                "error": "Enter a message of 1–4096 characters.",
+            },
             status=400,
         )
 
@@ -192,7 +379,10 @@ def send_telegram_message(request, chat_id):
 
     if not token:
         return JsonResponse(
-            {"ok": False, "error": "Telegram bot token is not configured."},
+            {
+                "ok": False,
+                "error": "Telegram bot token is not configured.",
+            },
             status=500,
         )
 
@@ -206,6 +396,7 @@ def send_telegram_message(request, chat_id):
             timeout=15,
         )
         result = response.json()
+
     except (requests.RequestException, ValueError):
         logger.exception("Telegram sendMessage request failed")
         return JsonResponse(
@@ -232,30 +423,11 @@ def send_telegram_message(request, chat_id):
         direction=TelegramMessage.OUTGOING,
         text=text,
         telegram_message_id=sent_message.get("message_id"),
+        media_type="text",
+        telegram_file_id="",
     )
 
-    # Broadcast outgoing messages too, so other open pages can update.
-    channel_layer = get_channel_layer()
-
-    if channel_layer is not None:
-        try:
-            async_to_sync(channel_layer.group_send)(
-                "telegram_updates",
-                {
-                    "type": "telegram_message",
-                    "data": {
-                        "id": saved_message.id,
-                        "chat_id": conversation.chat_id,
-                        "username": conversation.username,
-                        "first_name": conversation.first_name,
-                        "text": saved_message.text,
-                        "direction": TelegramMessage.OUTGOING,
-                        "created_at": saved_message.created_at.isoformat(),
-                    },
-                },
-            )
-        except Exception:
-            logger.exception("Failed to broadcast outgoing message")
+    broadcast_message(saved_message)
 
     return JsonResponse({
         "ok": True,
@@ -264,6 +436,7 @@ def send_telegram_message(request, chat_id):
             "chat_id": conversation.chat_id,
             "text": saved_message.text,
             "direction": saved_message.direction,
+            "media_type": saved_message.media_type,
             "created_at": saved_message.created_at.isoformat(),
         },
     })

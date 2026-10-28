@@ -15,4 +15,9 @@ urlpatterns = [
         views.send_telegram_message,
         name="send_telegram_message",
     ),
+    path(
+        "media/<int:message_id>/",
+        views.telegram_media,
+        name="telegram_media",
+    ),
 ]
