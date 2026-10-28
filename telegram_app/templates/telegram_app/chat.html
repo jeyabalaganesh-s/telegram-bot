@@ -76,5 +76,45 @@
         <p id="send-status" role="status" style="margin-top:10px"></p>
     </section>
 </main>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const history = document.getElementById("chat-history");
+    if (!history) return;
+
+    const chatId = history.dataset.chatId;
+    const scheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const socket = new WebSocket(
+        `${scheme}://${window.location.host}/ws/telegram/`
+    );
+
+    socket.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+
+            // Ignore messages belonging to other conversations.
+            if (String(data.chat_id) !== String(chatId)) return;
+
+            // Avoid inserting HTML from a Telegram message.
+            const bubble = document.createElement("div");
+            bubble.style.cssText =
+                "padding:12px;margin:10px 0;border-radius:12px;" +
+                "background:#f1f5f9;margin-right:15%;overflow-wrap:anywhere";
+
+            const body = document.createElement("p");
+            body.textContent = data.text || "";
+            body.style.whiteSpace = "pre-wrap";
+
+            bubble.appendChild(body);
+            history.appendChild(bubble);
+            history.scrollTop = history.scrollHeight;
+        } catch (error) {
+            console.error("Invalid WebSocket message", error);
+        }
+    };
+});
+</script>
+</body>
+
 </body>
 </html>

@@ -48,5 +48,25 @@
         {% endfor %}
     </section>
 </main>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const scheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const socket = new WebSocket(
+        `${scheme}://${window.location.host}/ws/telegram/`
+    );
+
+    socket.onmessage = () => {
+        // Reload the conversation list after a message arrives.
+        window.location.reload();
+    };
+
+    socket.onclose = () => {
+        console.log("Conversation updates disconnected.");
+    };
+});
+</script>
+
 </body>
 </html>
