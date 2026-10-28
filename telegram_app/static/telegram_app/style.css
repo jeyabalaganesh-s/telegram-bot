@@ -1,3 +1,8 @@
+
+/* ==============================
+   Global styles
+============================== */
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -19,10 +24,15 @@ body {
     min-height: 100vh;
 }
 
+/* ==============================
+   Sidebar
+============================== */
+
 .sidebar {
     width: 250px;
+    min-height: 100vh;
     background: #172033;
-    color: white;
+    color: #ffffff;
     padding: 28px 18px;
     display: flex;
     flex-direction: column;
@@ -33,18 +43,19 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 42px;
+    margin-bottom: 12px;
 }
 
 .brand-icon {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
     border-radius: 14px;
     display: grid;
     place-items: center;
     background: #2688d9;
     font-size: 23px;
     font-weight: 800;
+    flex-shrink: 0;
 }
 
 .brand h2 {
@@ -59,17 +70,71 @@ body {
     margin-top: 5px;
 }
 
-.nav-item {
-    padding: 14px;
-    border-radius: 10px;
-    color: #b9c4d6;
-    margin-bottom: 8px;
+/* Sidebar navigation — desktop and mobile */
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    margin-top: 30px;
+    width: 100%;
 }
 
-.nav-item.active {
-    background: #263650;
-    color: white;
+.sidebar-nav .nav-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    color: #b9c4d6;
+    text-decoration: none;
+    font-size: 15px;
+    line-height: 1.4;
+    margin-bottom: 0;
+    transition: background 0.2s ease, color 0.2s ease;
 }
+
+.sidebar-nav .nav-item:hover,
+.sidebar-nav .nav-item.active {
+    background: #263650;
+    color: #ffffff;
+}
+
+/* Logout */
+
+.sidebar-logout {
+    width: 100%;
+    margin-top: 12px;
+}
+
+.sidebar-logout form {
+    width: 100%;
+    margin: 0;
+}
+
+.sidebar-logout .logout-button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 12px 14px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: #b9c4d6;
+    font-family: inherit;
+    font-size: 15px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.sidebar-logout .logout-button:hover {
+    background: #263650;
+    color: #ffffff;
+}
+
+/* Connection status */
 
 .sidebar-bottom {
     display: flex;
@@ -86,9 +151,13 @@ body {
     height: 9px;
     display: inline-block;
     border-radius: 50%;
-    background: #f0ad4e;
+    background: #22c55e;
     flex-shrink: 0;
 }
+
+/* ==============================
+   Main dashboard
+============================== */
 
 .main {
     flex: 1;
@@ -117,7 +186,7 @@ body {
     display: flex;
     align-items: center;
     gap: 9px;
-    background: white;
+    background: #ffffff;
     border: 1px solid #e6eaf1;
     padding: 12px 16px;
     border-radius: 12px;
@@ -126,8 +195,12 @@ body {
 }
 
 .bot-badge .status-dot {
-    background: #f0ad4e;
+    background: #22c55e;
 }
+
+/* ==============================
+   Statistics
+============================== */
 
 .stats {
     display: grid;
@@ -138,7 +211,7 @@ body {
 
 .stat-card,
 .messages-panel {
-    background: white;
+    background: #ffffff;
     border: 1px solid #e8ecf3;
     border-radius: 16px;
     padding: 24px;
@@ -159,6 +232,10 @@ body {
     font-size: 12px;
 }
 
+/* ==============================
+   Messages panel
+============================== */
+
 .panel-header {
     padding-bottom: 22px;
     border-bottom: 1px solid #edf0f5;
@@ -170,10 +247,11 @@ body {
 
 .panel-header button {
     padding: 10px 14px;
-    background: white;
+    background: #ffffff;
     border: 1px solid #dce2ec;
     border-radius: 9px;
     cursor: pointer;
+    font: inherit;
 }
 
 .panel-header button:hover {
@@ -259,7 +337,77 @@ body {
     white-space: pre-wrap;
     line-height: 1.6;
     font-size: 14px;
+    overflow-wrap: anywhere;
 }
+
+/* ==============================
+   Message composer
+   Used when the send form is added
+============================== */
+
+.message-composer {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.message-composer form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.message-composer input {
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid #dbe3ef;
+    border-radius: 10px;
+    font: inherit;
+    outline: none;
+}
+
+.message-composer input:focus {
+    border-color: #2688d9;
+    box-shadow: 0 0 0 3px rgba(38, 136, 217, 0.12);
+}
+
+#recipient-chat-id {
+    width: 180px;
+}
+
+#outgoing-message {
+    flex: 1;
+}
+
+#send-button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 10px;
+    background: #1685d1;
+    color: #ffffff;
+    font: inherit;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+#send-button:hover {
+    background: #086fb7;
+}
+
+#send-button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+#send-status {
+    margin-top: 8px;
+    color: #64748b;
+    font-size: 13px;
+}
+
+/* ==============================
+   Footer
+============================== */
 
 footer {
     text-align: center;
@@ -267,6 +415,10 @@ footer {
     font-size: 12px;
     padding: 30px 0 0;
 }
+
+/* ==============================
+   Responsive layout
+============================== */
 
 @media (max-width: 760px) {
     .sidebar {
@@ -278,9 +430,29 @@ footer {
         justify-content: center;
     }
 
-    .brand>div:last-child,
-    .nav-item,
+    .brand > div:last-child {
+        display: none;
+    }
+
+    .sidebar-nav .nav-item {
+        justify-content: center;
+        padding: 12px 4px;
+        font-size: 0;
+    }
+
+    .sidebar-logout {
+        padding: 0;
+    }
+
+    .sidebar-logout .logout-button {
+        justify-content: center;
+        padding: 12px 4px;
+        font-size: 0;
+    }
+
     .sidebar-bottom {
+        justify-content: center;
+        padding: 14px 0;
         font-size: 0;
     }
 
@@ -311,61 +483,17 @@ footer {
         flex-direction: column;
     }
 
-    .sidebar-nav {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        margin-top: 30px;
+    .message-composer form {
+        flex-wrap: wrap;
     }
 
-    .sidebar-nav .nav-item {
-        display: flex;
-        align-items: center;
-        padding: 12px 14px;
-        border-radius: 10px;
-        color: #cbd5e1;
-        text-decoration: none;
-        font-size: 15px;
-        transition: background 0.2s ease, color 0.2s ease;
-    }
-
-    .sidebar-nav .nav-item:hover,
-    .sidebar-nav .nav-item.active {
-        background: #263752;
-        color: #ffffff;
-    }
-
-    .sidebar-logout {
-        margin-top: 12px;
-        padding: 0 14px;
-    }
-
-    .sidebar-logout form {
-        margin: 0;
-    }
-
-    .logout-button {
-        display: flex;
-        align-items: center;
+    #recipient-chat-id,
+    #outgoing-message {
         width: 100%;
-        padding: 10px 0;
-        border: none;
-        background: transparent;
-        color: #cbd5e1;
-        font: inherit;
-        font-size: 15px;
-        cursor: pointer;
-        text-align: left;
+        flex: 1 1 100%;
     }
 
-    .logout-button:hover {
-        color: #ffffff;
+    #send-button {
+        width: 100%;
     }
-
-    .sidebar-bottom {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
 }

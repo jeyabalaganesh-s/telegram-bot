@@ -127,6 +127,38 @@
                     aria-relevant="additions"
                 ></div>
 
+                
+<!-- Send Telegram message -->
+<div class="message-composer">
+    <form id="send-message-form">
+        {% csrf_token %}
+
+        <input
+            type="text"
+            id="recipient-chat-id"
+            placeholder="Recipient Chat ID"
+            aria-label="Recipient Chat ID"
+            required
+        >
+
+        <input
+            type="text"
+            id="outgoing-message"
+            placeholder="Type your message..."
+            aria-label="Message"
+            maxlength="4096"
+            required
+        >
+
+        <button type="submit" id="send-button">
+            Send
+        </button>
+    </form>
+
+    <p id="send-status" role="status"></p>
+</div>
+
+
             </section>
 
             <footer>
