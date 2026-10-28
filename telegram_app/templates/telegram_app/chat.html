@@ -1,0 +1,80 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chat with {{ conversation.display_name }} | JEMI</title>
+    <link rel="stylesheet" href="{% static 'telegram_app/style.css' %}">
+    <script src="{% static 'telegram_app/chat.js' %}" defer></script>
+    <style>
+        .message-bubble {
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 12px;
+            overflow-wrap: anywhere;
+        }
+        .message-bubble--outgoing {
+            background: #eaf4ff;
+            margin-left: 15%;
+        }
+        .message-bubble--incoming {
+            background: #f1f5f9;
+            margin-right: 15%;
+        }
+    </style>
+</head>
+<body>
+<main class="main">
+    <header class="topbar">
+        <div>
+            <h1>{{ conversation.display_name }}</h1>
+            <p>
+                Telegram Chat ID: <span id="chat-id">{{ conversation.chat_id }}</span>
+            </p>
+        </div>
+        <a href="{% url 'conversations' %}">← All conversations</a>
+    </header>
+
+    <section class="messages-panel" style="margin-top:24px">
+        <div
+            id="chat-history"
+            data-chat-id="{{ conversation.chat_id }}"
+            style="min-height:300px;max-height:60vh;overflow-y:auto;padding:12px"
+            aria-live="polite"
+        >
+            {% for message in messages %}
+            <div
+                class="message-bubble {% if message.direction == 'outgoing' %}message-bubble--outgoing{% else %}message-bubble--incoming{% endif %}"
+            >
+                <strong>
+                    {% if message.direction == "outgoing" %}You{% else %}{{ conversation.display_name }}{% endif %}
+                </strong>
+                <p style="white-space:pre-wrap;margin-top:6px">{{ message.text }}</p>
+                <small style="color:#68758b">{{ message.created_at|date:"d M Y, H:i" }}</small>
+            </div>
+            {% endfor %}
+        </div>
+
+        <form
+            id="send-message-form"
+            data-send-url="{% url 'send_telegram_message' conversation.chat_id %}"
+            style="display:flex;gap:10px;margin-top:18px"
+        >
+            {% csrf_token %}
+            <input
+                id="outgoing-message"
+                type="text"
+                placeholder="Write a message..."
+                maxlength="4096"
+                required
+                style="flex:1;min-width:0;padding:13px;border:1px solid #dbe3ef;border-radius:10px"
+            >
+            <button id="send-button" type="submit">Send</button>
+        </form>
+        <p id="send-status" role="status" style="margin-top:10px"></p>
+    </section>
+</main>
+</body>
+</html>

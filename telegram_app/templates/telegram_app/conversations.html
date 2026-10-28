@@ -1,0 +1,52 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>JEMI | Conversations</title>
+    <link rel="stylesheet" href="{% static 'telegram_app/style.css' %}">
+</head>
+<body>
+<main class="main">
+    <header class="topbar">
+        <div>
+            <h1>Messages</h1>
+            <p>Select a conversation to chat with a Telegram user.</p>
+        </div>
+        <a href="{% url 'dashboard' %}">Back to dashboard</a>
+    </header>
+
+    <section class="messages-panel" style="margin-top:24px">
+        {% for conversation in conversations %}
+        <a
+            href="{% url 'telegram_chat' conversation.chat_id %}"
+            style="display:block;padding:18px;border-bottom:1px solid #e8ecf3;color:inherit;text-decoration:none"
+        >
+            <strong>{{ conversation.display_name }}</strong>
+            {% if conversation.username %}
+                <span style="color:#68758b">@{{ conversation.username }}</span>
+            {% endif %}
+            <p style="color:#68758b;margin-top:6px;font-size:13px">
+                Chat ID: {{ conversation.chat_id }}
+            </p>
+            {% with last_message=conversation.messages.last %}
+                {% if last_message %}
+                    <p style="margin-top:8px;overflow-wrap:anywhere">
+                        {% if last_message.direction == "outgoing" %}You: {% endif %}
+                        {{ last_message.text|truncatechars:90 }}
+                    </p>
+                {% endif %}
+            {% endwith %}
+        </a>
+        {% empty %}
+            <div class="empty-state">
+                <h3>No conversations yet</h3>
+                <p>Ask someone to open your bot and send it a message.</p>
+            </div>
+        {% endfor %}
+    </section>
+</main>
+</body>
+</html>
