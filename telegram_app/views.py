@@ -142,6 +142,11 @@ def telegram_webhook(request):
 
     message = update.get("message") or update.get("channel_post")
 
+    logger.info(
+        "Telegram update received. Keys: %s",
+        list(message.keys()),
+    )
+
     if not message:
         return JsonResponse({"ok": True})
 
