@@ -1,0 +1,86 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JEMI | Telegram Dashboard</title>
+    <link rel="stylesheet" href="{% static 'telegram_app/style.css' %}">
+    <script src="{% static 'telegram_app/dashboard.js' %}" defer></script>
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">J</div>
+                <div>
+                    <h2>JEMI</h2>
+                    <p>Telegram Dashboard</p>
+                </div>
+            </div>
+<form method="post" action="{% url 'logout' %}">
+    {% csrf_token %}
+    <button type="submit">Logout</button>
+</form>
+            <div class="nav-item active">▦ &nbsp; Dashboard</div>
+            <div class="nav-item">✉ &nbsp; Messages</div>
+
+            <div class="sidebar-bottom">
+                <span class="status-dot"></span>
+                <span id="connection-status">Connecting...</span>
+            </div>
+        </aside>
+
+        <main class="main">
+            <header class="topbar">
+                <div>
+                    <h1>Telegram Dashboard</h1>
+                    <p>Monitor incoming messages in real time.</p>
+                </div>
+                <div class="bot-badge">
+                    <span class="status-dot"></span>
+                    JEMI Bot
+                </div>
+            </header>
+
+            <section class="stats">
+                <article class="stat-card">
+                    <p>Connection status</p>
+                    <h2 id="connection-value">Connecting</h2>
+                    <span>WebSocket connection</span>
+                </article>
+
+                <article class="stat-card">
+                    <p>Messages received</p>
+                    <h2 id="message-count">0</h2>
+                    <span>During this session</span>
+                </article>
+            </section>
+
+            <section class="messages-panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Incoming messages</h2>
+                        <p>New Telegram messages appear automatically.</p>
+                    </div>
+                    <button id="clear-button" type="button">Clear history</button>
+                </div>
+
+                <div id="empty-state" class="empty-state">
+                    <div class="empty-icon">✉</div>
+                    <h3>Waiting for messages</h3>
+                    <p>Send a message to JEMI on Telegram to see it here.</p>
+                </div>
+
+                <div id="message-list" class="message-list"
+                     aria-live="polite"></div>
+            </section>
+
+            <footer>
+                JEMI Dashboard · Django + Channels
+            </footer>
+        </main>
+    </div>
+</body>
+</html>

@@ -60,3 +60,12 @@ def telegram_webhook(request):
         print("Received Telegram message:", data)
 
     return JsonResponse({"ok": True})
+
+from django.shortcuts import render
+
+from django.contrib.auth.decorators import login_required
+
+
+@login_required(login_url="/accounts/login/")
+def dashboard(request):
+    return render(request, "telegram_app/dashboard.html")

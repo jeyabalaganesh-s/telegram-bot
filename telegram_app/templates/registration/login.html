@@ -1,0 +1,94 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | JEMI</title>
+    <link rel="stylesheet" href="{% static 'telegram_app/style.css' %}">
+    <style>
+        body {
+            display: grid;
+            place-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .login-card {
+            width: 100%;
+            max-width: 420px;
+            background: white;
+            border: 1px solid #e8ecf3;
+            border-radius: 18px;
+            padding: 32px;
+        }
+        .login-card h1 { margin-bottom: 8px; }
+        .subtitle { color: #68758b; margin-bottom: 26px; }
+        .field { margin-bottom: 18px; }
+        .field label {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .field input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #dce2ec;
+            border-radius: 9px;
+            font-size: 15px;
+        }
+        .login-button {
+            width: 100%;
+            padding: 13px;
+            border: 0;
+            border-radius: 9px;
+            color: white;
+            background: #2688d9;
+            font-size: 15px;
+            cursor: pointer;
+        }
+        .error { color: #c0392b; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+    <main class="login-card">
+        <h1>Welcome to JEMI</h1>
+        <p class="subtitle">Sign in to access your Telegram dashboard.</p>
+
+        {% if form.errors %}
+            <p class="error">Invalid username or password. Please try again.</p>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="field">
+                <label for="id_username">Username</label>
+                <input
+                    type="text"
+                    name="username"
+                    id="id_username"
+                    autocomplete="username"
+                    required
+                    autofocus
+                >
+            </div>
+
+            <div class="field">
+                <label for="id_password">Password</label>
+                <input
+                    type="password"
+                    name="password"
+                    id="id_password"
+                    autocomplete="current-password"
+                    required
+                >
+            </div>
+
+            <input type="hidden" name="next" value="{{ next }}">
+
+            <button class="login-button" type="submit">Sign in</button>
+        </form>
+    </main>
+</body>
+</html>
