@@ -5,68 +5,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <title>JEMI | Conversations</title>
-    <link rel="stylesheet" href="{% static 'telegram_app/style.css' %}">
+
+    <link
+        rel="stylesheet"
+        href="{% static 'telegram_app/style.css' %}"
+    >
+
+    <script
+        src="{% static 'telegram_app/conversations.js' %}"
+        defer
+    ></script>
 </head>
+
 <body>
-<main class="main">
-    <header class="topbar">
-        <div>
-            <h1>Messages</h1>
-            <p>Select a conversation to chat with a Telegram user.</p>
-        </div>
-        <a href="{% url 'dashboard' %}">Back to dashboard</a>
-    </header>
+<div class="app">
 
-    <section class="messages-panel" style="margin-top:24px">
-        {% for conversation in conversations %}
-        <a
-            href="{% url 'telegram_chat' conversation.chat_id %}"
-            style="display:block;padding:18px;border-bottom:1px solid #e8ecf3;color:inherit;text-decoration:none"
-        >
-            <strong>{{ conversation.display_name }}</strong>
-            {% if conversation.username %}
-                <span style="color:#68758b">@{{ conversation.username }}</span>
-            {% endif %}
-            <p style="color:#68758b;margin-top:6px;font-size:13px">
-                Chat ID: {{ conversation.chat_id }}
-            </p>
-            {% with last_message=conversation.messages.last %}
-                {% if last_message %}
-                    <p style="margin-top:8px;overflow-wrap:anywhere">
-                        {% if last_message.direction == "outgoing" %}You: {% endif %}
-                        {{ last_message.text|truncatechars:90 }}
-                    </p>
-                {% endif %}
-            {% endwith %}
-        </a>
-        {% empty %}
-            <div class="empty-state">
-                <h3>No conversations yet</h3>
-                <p>Ask someone to open your bot and send it a message.</p>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+        <div class="brand">
+            <div class="brand-icon">J</div>
+
+            <div>
+                <h2>JEMI</h2>
+                <p>Telegram Dashboard</p>
             </div>
-        {% endfor %}
-    </section>
-</main>
+        </div>
 
+        <nav class="sidebar-nav">
+            <a href="{% url 'dashboard' %}" class="nav-item">
+                ▦ &nbsp; Dashboard
+            </a>
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-    const scheme = window.location.protocol === "https:" ? "wss" : "ws";
-    const socket = new WebSocket(
-        `${scheme}://${window.location.host}/ws/telegram/`
-    );
+            <a href="{% url 'conversations' %}" class="nav-item active">
+                ✉ &nbsp; Messages
+            </a>
+        </nav>
 
-    socket.onmessage = () => {
-        // Reload the conversation list after a message arrives.
-        window.location.reload();
-    };
+        <!-- Logout -->
+        <div class="sidebar-logout">
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
 
-    socket.onclose = () => {
-        console.log("Conversation updates disconnected.");
-    };
-});
-</script>
+                <button type="submit" class="logout-button">
+                    ⇥ &nbsp; Logout
+                </button>
+            </form>
+        </div>
 
+        <!-- WebSocket status -->
+        <div class="sidebar-bottom">
+            <span class="status-dot" id="connection-dot"></span>
+            <span id="connection-status">Connecting...</span>
+        </div>
+
+    </aside>
+
+    <!-- Main content -->
+    <main class="main">
+
+        <header class="topbar">
+            <div>
+                <h1>Messages</h1>
+                <p>Select a conversation to chat with a Telegram user.</p>
+            </div>
+
+            <div class="bot-badge">
+                <span class="status-dot"></span>
+                JEMI Bot
+            </div>
+        </header>
+
+        <!-- Conversation list -->
+        <section class="messages-panel" style="margin-top: 32px;">
+
+            <div class="panel-header">
+                <div>
+                    <h2>Your conversations</h2>
+                    <p id="conversation-count">
+                        {{ conversations|length }} conversation(s)
+                    </p>
+                </div>
+            </div>
+
+            <div id="conversation-list">
+
+                {% for conversation in conversations %}
+                <a
+                    class="conversation-item"
+                    href="{% url 'telegram_chat' conversation.chat_id %}"
+                    data-chat-id="{{ conversation.chat_id }}"
+                >
+                    <div class="conversation-avatar">
+                        {{ conversation.display_name|slice:":1"|upper }}
+                    </div>
+
+                    <div class="conversation-details">
+                        <div class="conversation-heading">
+                            <strong>
+                                {{ conversation.display_name }}
+                            </strong>
+
+                            <span class="conversation-time">
+                                {% with last_message=conversation.messages.last %}
+                                    {% if last_message %}
+                                        {{ last_message.created_at|date:"H:i" }}
+                                    {% endif %}
+                                {% endwith %}
+                            </span>
+                        </div>
+
+                        {% if conversation.username %}
+                        <p class="conversation-username">
+                            @{{ conversation.username }}
+                        </p>
+                        {% endif %}
+
+                        <p class="conversation-preview">
+                            {% with last_message=conversation.messages.last %}
+                                {% if last_message %}
+                                    {% if last_message.direction == "outgoing" %}
+                                        You:
+                                    {% endif %}
+                                    {{ last_message.text|truncatechars:75 }}
+                                {% else %}
+                                    Start a conversation
+                                {% endif %}
+                            {% endwith %}
+                        </p>
+
+                        <span class="conversation-chat-id">
+                            Chat ID: {{ conversation.chat_id }}
+                        </span>
+                    </div>
+                </a>
+
+                {% empty %}
+                <div class="empty-state" id="empty-state">
+                    <div class="empty-icon">✉</div>
+                    <h3>No conversations yet</h3>
+                    <p>
+                        Send a message to your JEMI Telegram bot
+                        to start a conversation.
+                    </p>
+                    <a
+                        href="https://t.me/JemiWebhookBot"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        Open JEMI on Telegram
+                    </a>
+                </div>
+                {% endfor %}
+
+            </div>
+
+        </section>
+
+        <footer>
+            JEMI Dashboard · Django + Channels
+        </footer>
+
+    </main>
+</div>
 </body>
 </html>

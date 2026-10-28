@@ -6,80 +6,270 @@ document.addEventListener("DOMContentLoaded", () => {
     const status = document.getElementById("send-status");
     const button = document.getElementById("send-button");
 
-    if (!form || !input || !history) return;
+    const connectionStatus = document.getElementById("connection-status");
+    const connectionDot = document.getElementById("connection-dot");
+
+    if (!form || !input || !history || !button) {
+        console.error("Chat elements are missing from chat.html.");
+        return;
+    }
 
     const csrfInput = form.querySelector(
         'input[name="csrfmiddlewaretoken"]'
     );
 
-    function addMessage(text, direction, timestamp) {
-        const bubble = document.createElement("div");
-        bubble.style.cssText =
-            "padding:12px;margin:10px 0;border-radius:12px;" +
-            "overflow-wrap:anywhere;" +
-            (direction === "outgoing"
-                ? "background:#eaf4ff;margin-left:15%;"
-                : "background:#f1f5f9;margin-right:15%;");
+    const chatId = String(history.dataset.chatId || "");
+    const sendUrl = form.dataset.sendUrl;
 
-        const sender = document.createElement("strong");
-        sender.textContent = direction === "outgoing" ? "You" : "Telegram user";
+    let socket = null;
+    let reconnectTimer = null;
+    let manuallyClosed = false;
 
-        const body = document.createElement("p");
-        body.textContent = text;
-        body.style.cssText = "white-space:pre-wrap;margin-top:6px";
+    // Update the sidebar connection indicator.
+    function setConnectionStatus(text, color) {
+        if (connectionStatus) {
+            connectionStatus.textContent = text;
+        }
 
-        const time = document.createElement("small");
-        time.textContent = timestamp
-            ? new Date(timestamp).toLocaleString()
-            : new Date().toLocaleString();
-        time.style.color = "#68758b";
+        if (connectionDot) {
+            connectionDot.style.backgroundColor = color;
+        }
+    }
 
-        bubble.append(sender, body, time);
-        history.appendChild(bubble);
+    // Scroll to the newest message.
+    function scrollToBottom() {
         history.scrollTop = history.scrollHeight;
     }
 
-    form.addEventListener("submit", async (event) => {
+    // Check whether a message is already displayed.
+    function messageExists(messageId) {
+        if (messageId === undefined || messageId === null) {
+            return false;
+        }
+
+        return Array.from(
+            history.querySelectorAll("[data-message-id]")
+        ).some(
+            element =>
+                element.dataset.messageId === String(messageId)
+        );
+    }
+
+    // Add a message safely to the chat window.
+    function addMessage(message) {
+        if (!message || !message.text) return;
+
+        // Only display messages for this conversation.
+        if (
+            message.chat_id !== undefined &&
+            String(message.chat_id) !== chatId
+        ) {
+            return;
+        }
+
+        // Prevent duplicates from HTTP responses and WebSocket events.
+        if (messageExists(message.id)) return;
+
+        const emptyState = history.querySelector(".empty-state");
+        if (emptyState) {
+            emptyState.remove();
+        }
+
+        const direction =
+            message.direction === "outgoing" ? "outgoing" : "incoming";
+
+        const bubble = document.createElement("div");
+        bubble.className = `message-bubble ${direction}`;
+
+        if (message.id !== undefined && message.id !== null) {
+            bubble.dataset.messageId = String(message.id);
+        }
+
+        const sender = document.createElement("strong");
+        sender.textContent = direction === "outgoing"
+            ? "You"
+            : "Telegram user";
+
+        const body = document.createElement("p");
+        body.className = "message-text";
+        body.textContent = message.text;
+
+        const time = document.createElement("small");
+        time.className = "message-meta";
+        time.textContent = message.created_at
+            ? new Date(message.created_at).toLocaleString()
+            : new Date().toLocaleString();
+
+        bubble.append(sender, body, time);
+        history.appendChild(bubble);
+
+        scrollToBottom();
+    }
+
+    // Read the CSRF token safely.
+    function getCsrfToken() {
+        if (csrfInput) {
+            return csrfInput.value;
+        }
+
+        const csrfCookie = document.cookie
+            .split("; ")
+            .find(cookie => cookie.startsWith("csrftoken="));
+
+        return csrfCookie
+            ? decodeURIComponent(csrfCookie.substring("csrftoken=".length))
+            : "";
+    }
+
+    // Connect to Django Channels.
+    function connectWebSocket() {
+        if (manuallyClosed) return;
+
+        const protocol =
+            window.location.protocol === "https:" ? "wss:" : "ws:";
+
+        socket = new WebSocket(
+            `${protocol}//${window.location.host}/ws/telegram/`
+        );
+
+        socket.onopen = () => {
+            setConnectionStatus("Connected", "#22c55e");
+        };
+
+        socket.onmessage = event => {
+            try {
+                const message = JSON.parse(event.data);
+                addMessage(message);
+            } catch (error) {
+                console.error("Could not parse WebSocket message:", error);
+            }
+        };
+
+        socket.onerror = () => {
+            setConnectionStatus("Connection error", "#ef4444");
+        };
+
+        socket.onclose = event => {
+            if (event.code === 4401) {
+                setConnectionStatus("Please log in again", "#ef4444");
+                return;
+            }
+
+            setConnectionStatus("Reconnecting...", "#f0ad4e");
+
+            if (!manuallyClosed) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = setTimeout(connectWebSocket, 3000);
+            }
+        };
+    }
+
+    // Send a message through Django to Telegram.
+    form.addEventListener("submit", async event => {
         event.preventDefault();
 
         const text = input.value.trim();
+
         if (!text) return;
 
+        if (text.length > 4096) {
+            if (status) {
+                status.textContent =
+                    "Message must be 4096 characters or fewer.";
+            }
+            return;
+        }
+
         button.disabled = true;
-        status.textContent = "Sending...";
+        input.disabled = true;
+
+        if (status) {
+            status.textContent = "Sending...";
+        }
 
         try {
-            const response = await fetch(form.dataset.sendUrl, {
+            const response = await fetch(sendUrl, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-CSRFToken": csrfInput.value,
+                    "X-CSRFToken": getCsrfToken()
                 },
-                body: JSON.stringify({ text }),
                 credentials: "same-origin",
+                body: JSON.stringify({ text })
             });
 
             const result = await response.json();
 
-            if (!response.ok || !result.ok) {
-                throw new Error(result.error || "Message could not be sent.");
+            // Supports either response key while your Django view is aligned.
+            if (
+                !response.ok ||
+                !(result.success === true || result.ok === true)
+            ) {
+                throw new Error(
+                    result.error || "Message could not be sent."
+                );
             }
 
-            addMessage(
-                result.message.text,
-                "outgoing",
-                result.message.created_at
-            );
+            if (result.message) {
+                addMessage({
+                    ...result.message,
+                    id: result.message.id,
+                    chat_id: result.message.chat_id ?? chatId,
+                    direction: "outgoing",
+                    text: result.message.text || text
+                });
+            } else {
+                // Fallback if the view doesn't return a message object.
+                addMessage({
+                    chat_id: chatId,
+                    direction: "outgoing",
+                    text
+                });
+            }
 
             input.value = "";
-            status.textContent = "Message sent.";
+
+            if (status) {
+                status.textContent = "Message sent.";
+            }
+
             input.focus();
         } catch (error) {
-            status.textContent = error.message || "Something went wrong.";
+            console.error("Failed to send message:", error);
+
+            if (status) {
+                status.textContent =
+                    error.message || "Something went wrong.";
+            }
         } finally {
             button.disabled = false;
+            input.disabled = false;
+            input.focus();
         }
     });
 
-    history.scrollTop = history.scrollHeight;
+    // Enter sends a message when using a textarea.
+    // Shift+Enter inserts a new line.
+    input.addEventListener("keydown", event => {
+        if (
+            input.tagName === "TEXTAREA" &&
+            event.key === "Enter" &&
+            !event.shiftKey
+        ) {
+            event.preventDefault();
+            form.requestSubmit();
+        }
+    });
+
+    scrollToBottom();
+    connectWebSocket();
+
+    window.addEventListener("beforeunload", () => {
+        manuallyClosed = true;
+        clearTimeout(reconnectTimer);
+
+        if (socket) {
+            socket.close();
+        }
+    });
 });
