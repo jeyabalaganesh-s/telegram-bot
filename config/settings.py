@@ -4,6 +4,7 @@ Django settings for config project.
 """
 
 import os
+import dj_database_url
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -125,13 +126,14 @@ TEMPLATES = [
 # SQLite for local development.
 # Configure DATABASE_URL and a PostgreSQL backend
 # separately if you move to PostgreSQL for production.
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
 
+DATABASES = {
+    "default": dj_database_url.parse(
+        os.environ["DATABASE_URL"],
+        conn_max_age=600,
+        ssl_require=True,
+    )
+}
 
 # --------------------------------------------------
 # DJANGO CHANNELS / WEBSOCKETS
