@@ -56,55 +56,87 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Add a message safely to the chat window.
-    function addMessage(message) {
-        if (!message || !message.text) return;
+    
+function addMessage(message) {
+    if (!message || !message.text) return;
 
-        // Only display messages for this conversation.
-        if (
-            message.chat_id !== undefined &&
-            String(message.chat_id) !== chatId
-        ) {
-            return;
-        }
-
-        // Prevent duplicates from HTTP responses and WebSocket events.
-        if (messageExists(message.id)) return;
-
-        const emptyState = history.querySelector(".empty-state");
-        if (emptyState) {
-            emptyState.remove();
-        }
-
-        const direction =
-            message.direction === "outgoing" ? "outgoing" : "incoming";
-
-        const bubble = document.createElement("div");
-        bubble.className = `message-bubble ${direction}`;
-
-        if (message.id !== undefined && message.id !== null) {
-            bubble.dataset.messageId = String(message.id);
-        }
-
-        const sender = document.createElement("strong");
-        sender.textContent = direction === "outgoing"
-            ? "You"
-            : "Telegram user";
-
-        const body = document.createElement("p");
-        body.className = "message-text";
-        body.textContent = message.text;
-
-        const time = document.createElement("small");
-        time.className = "message-meta";
-        time.textContent = message.created_at
-            ? new Date(message.created_at).toLocaleString()
-            : new Date().toLocaleString();
-
-        bubble.append(sender, body, time);
-        history.appendChild(bubble);
-
-        scrollToBottom();
+    if (
+        message.chat_id !== undefined &&
+        String(message.chat_id) !== String(history.dataset.chatId)
+    ) {
+        return;
     }
+
+    // Prevent duplicate messages.
+    if (message.id !== undefined && message.id !== null) {
+        const existing = Array.from(
+            history.querySelectorAll("[data-message-id]")
+        ).some(
+            element =>
+                element.dataset.messageId === String(message.id)
+        );
+
+        if (existing) return;
+    }
+
+    const emptyState = history.querySelector(".empty-state");
+    if (emptyState) emptyState.remove();
+
+    const outgoing = message.direction === "outgoing";
+
+    const bubble = document.createElement("div");
+    bubble.className = `message-bubble ${outgoing ? "outgoing" : "incoming"}`;
+
+    if (message.id !== undefined && message.id !== null) {
+        bubble.dataset.messageId = String(message.id);
+    }
+
+    // Match the bubble appearance used in the chat page.
+    bubble.style.cssText = `
+        padding: 12px 16px;
+        margin: 10px 0;
+        border-radius: 12px;
+        overflow-wrap: anywhere;
+        white-space: normal;
+        width: ${outgoing ? "75%" : "75%"};
+        ${outgoing
+            ? "margin-left: auto; margin-right: 0; background: #eaf4ff;"
+            : "margin-left: 0; margin-right: auto; background: #f1f5f9;"}
+        box-sizing: border-box;
+    `;
+
+    const sender = document.createElement("strong");
+    sender.textContent = outgoing ? "You" : "Bala";
+    sender.style.cssText = "display:block;color:#64748b;font-size:13px;margin-bottom:8px;";
+
+    const body = document.createElement("div");
+    body.className = "message-text";
+    body.textContent = message.text;
+    body.style.cssText = "white-space:pre-wrap;overflow-wrap:anywhere;margin-bottom:10px;";
+
+    const timestamp = document.createElement("small");
+    timestamp.style.cssText = "display:block;color:#94a3b8;font-size:12px;";
+
+    if (message.created_at) {
+        timestamp.textContent = new Date(message.created_at)
+            .toLocaleString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false
+            });
+    } else {
+        timestamp.textContent = new Date().toLocaleString();
+    }
+
+    bubble.append(sender, body, timestamp);
+    history.appendChild(bubble);
+
+    history.scrollTop = history.scrollHeight;
+}
+
 
     // Read the CSRF token safely.
     function getCsrfToken() {
