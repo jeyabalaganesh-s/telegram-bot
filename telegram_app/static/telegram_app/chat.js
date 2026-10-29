@@ -57,9 +57,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Add a message safely to the chat window.
     
-function addMessage(message) {
-    if (!message || !message.text) return;
 
+function addMessage(message) {
+    if (!message) return;
+
+    // Ignore messages belonging to another conversation.
     if (
         message.chat_id !== undefined &&
         String(message.chat_id) !== String(history.dataset.chatId)
@@ -67,17 +69,14 @@ function addMessage(message) {
         return;
     }
 
-    // Prevent duplicate messages.
-    if (message.id !== undefined && message.id !== null) {
-        const existing = Array.from(
-            history.querySelectorAll("[data-message-id]")
-        ).some(
-            element =>
-                element.dataset.messageId === String(message.id)
-        );
+    // Prevent duplicate messages from WebSocket and HTTP responses.
+    if (messageExists(message.id)) return;
 
-        if (existing) return;
-    }
+    // Allow media-only messages without text or captions.
+    const hasText = Boolean(message.text);
+    const hasMedia = Boolean(message.media_url);
+
+    if (!hasText && !hasMedia) return;
 
     const emptyState = history.querySelector(".empty-state");
     if (emptyState) emptyState.remove();
@@ -85,37 +84,87 @@ function addMessage(message) {
     const outgoing = message.direction === "outgoing";
 
     const bubble = document.createElement("div");
-    bubble.className = `message-bubble ${outgoing ? "outgoing" : "incoming"}`;
+    bubble.className = `message-bubble ${
+        outgoing
+            ? "message-bubble--outgoing"
+            : "message-bubble--incoming"
+    }`;
 
     if (message.id !== undefined && message.id !== null) {
         bubble.dataset.messageId = String(message.id);
     }
 
-    // Match the bubble appearance used in the chat page.
-    bubble.style.cssText = `
-        padding: 12px 16px;
-        margin: 10px 0;
-        border-radius: 12px;
-        overflow-wrap: anywhere;
-        white-space: normal;
-        width: ${outgoing ? "75%" : "75%"};
-        ${outgoing
-            ? "margin-left: auto; margin-right: 0; background: #eaf4ff;"
-            : "margin-left: 0; margin-right: auto; background: #f1f5f9;"}
-        box-sizing: border-box;
-    `;
-
     const sender = document.createElement("strong");
+    sender.className = "message-sender";
     sender.textContent = outgoing ? "You" : "Bala";
-    sender.style.cssText = "display:block;color:#64748b;font-size:13px;margin-bottom:8px;";
+    bubble.appendChild(sender);
 
-    const body = document.createElement("div");
-    body.className = "message-text";
-    body.textContent = message.text;
-    body.style.cssText = "white-space:pre-wrap;overflow-wrap:anywhere;margin-bottom:10px;";
+    // Render text or caption when present.
+    if (hasText) {
+        const body = document.createElement("p");
+        body.className = "message-content";
+        body.textContent = message.text;
+        bubble.appendChild(body);
+    }
+
+    // Render media received through the WebSocket.
+    if (hasMedia) {
+        const media = document.createElement("div");
+        media.className = "message-media";
+
+        const url = message.media_url;
+        const type = message.media_type || "document";
+
+        if (type === "photo" || type === "sticker") {
+            const link = document.createElement("a");
+            link.href = url;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+
+            const img = document.createElement("img");
+            img.src = url;
+            img.alt = type === "photo"
+                ? "Telegram photo"
+                : "Telegram sticker";
+            img.loading = "lazy";
+
+            link.appendChild(img);
+            media.appendChild(link);
+
+        } else if (
+            ["video", "animation", "video_note"].includes(type)
+        ) {
+            const video = document.createElement("video");
+            video.controls = true;
+            video.preload = "metadata";
+
+            const source = document.createElement("source");
+            source.src = url;
+
+            video.appendChild(source);
+            media.appendChild(video);
+
+        } else if (["audio", "voice"].includes(type)) {
+            const audio = document.createElement("audio");
+            audio.controls = true;
+            audio.preload = "metadata";
+            audio.src = url;
+            media.appendChild(audio);
+
+        } else {
+            const link = document.createElement("a");
+            link.href = url;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.textContent = "View or download attachment";
+            media.appendChild(link);
+        }
+
+        bubble.appendChild(media);
+    }
 
     const timestamp = document.createElement("small");
-    timestamp.style.cssText = "display:block;color:#94a3b8;font-size:12px;";
+    timestamp.className = "message-date";
 
     if (message.created_at) {
         timestamp.textContent = new Date(message.created_at)
@@ -127,14 +176,12 @@ function addMessage(message) {
                 minute: "2-digit",
                 hour12: false
             });
-    } else {
-        timestamp.textContent = new Date().toLocaleString();
     }
 
-    bubble.append(sender, body, timestamp);
+    bubble.appendChild(timestamp);
     history.appendChild(bubble);
 
-    history.scrollTop = history.scrollHeight;
+    scrollToBottom();
 }
 
 
