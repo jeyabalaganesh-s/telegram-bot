@@ -20,7 +20,7 @@ from .models import TelegramConversation, TelegramMessage
 from django.views.decorators.http import require_POST
 from django.core.files.uploadedfile import UploadedFile
 
-
+from .services.complaint_service import process_incoming_message    
 
 from django.views.decorators.http import require_GET
 
@@ -208,7 +208,6 @@ def telegram_webhook(request):
         media_type=media_type,
         telegram_file_id=file_id,
     )
-
     broadcast_message(saved_message)
 
     logger.info(
@@ -216,6 +215,14 @@ def telegram_webhook(request):
         media_type,
         chat_id,
     )
+
+    try:
+        process_incoming_message(saved_message)
+    except Exception:
+        logger.exception(
+            "Complaint processing failed for chat %s",
+            chat_id,
+        )
 
     return JsonResponse({"ok": True})
 

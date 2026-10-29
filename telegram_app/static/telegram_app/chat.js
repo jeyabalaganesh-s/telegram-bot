@@ -32,6 +32,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const sendUrl = form.dataset.sendUrl;
     const mediaUrl = form.dataset.mediaUrl;
 
+
+    // Focus the message box when the page is ready.
+function focusMessageInput() {
+    if (!input || input.disabled) return;
+
+    input.focus({ preventScroll: true });
+}
+
+requestAnimationFrame(focusMessageInput);
+
+window.addEventListener("load", focusMessageInput);
+
     let socket = null;
     let reconnectTimer = null;
     let manuallyClosed = false;
@@ -595,10 +607,19 @@ document.addEventListener("DOMContentLoaded", () => {
                     error.message || "Something went wrong.";
             }
 
+        
         } finally {
-            button.disabled = false;
-            input.disabled = false;
-        }
+    // Use the actual variable names declared in your file.
+    button.disabled = false;
+    input.disabled = false;
+    button.textContent = "Send";
+
+    // Return focus after the browser updates the UI.
+    requestAnimationFrame(() => {
+        input.focus({ preventScroll: true });
+    });
+}
+
     });
 
     // Support Enter-to-send if the input is changed to a textarea.

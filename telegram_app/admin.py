@@ -1,7 +1,6 @@
 
 from django.contrib import admin
-from .models import TelegramConversation, TelegramMessage
-
+from .models import TelegramConversation, TelegramMessage, Complaint
 
 class TelegramMessageInline(admin.TabularInline):
     model = TelegramMessage
@@ -90,3 +89,23 @@ class TelegramMessageAdmin(admin.ModelAdmin):
             ),
         }),
     )
+
+
+
+@admin.register(Complaint)
+class ComplaintAdmin(admin.ModelAdmin):
+    list_display = (
+        "complaint_id",
+        "category",
+        "status",
+        "evidence_result",
+        "created_at",
+    )
+
+    list_filter = ("status", "evidence_result", "category")
+    search_fields = (
+        "description",
+        "location",
+        "complaint_id",
+    )
+    readonly_fields = ("complaint_id", "created_at", "updated_at")
