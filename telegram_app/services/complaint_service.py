@@ -238,14 +238,67 @@ def process_complaint_text(conversation, user_text):
             )
             return
 
-    # No active complaint: determine whether this is a complaint.
-    if not analysis.get("is_complaint"):
+    
+        # No active complaint: determine whether this is a complaint.
+        # Handle abusive language before sending the default welcome message.
+        if analysis.get("abusive_language"):
+            latest_complaint = (
+                Complaint.objects.filter(conversation=conversation)
+                .order_by("-created_at")
+                .first()
+            )
+
+            if latest_complaint:
+                latest_complaint.language_warning_count += 1
+                latest_complaint.save(
+                    update_fields=["language_warning_count", "updated_at"]
+                )
+
+            send_bot_message(
+                conversation,
+                "Please keep the conversation respectful. "
+                "If you need to report another public problem, "
+                "please describe the issue clearly."
+            )
+            return
+
+        if not analysis.get("is_complaint"):
+            send_bot_message(
+                conversation,
+                "Hello! I can help you report public problems such as "
+                "damaged dustbins, overflowing waste bins, broken streetlights, "
+                "or damaged roads. Please describe the problem you noticed."
+            )
+            return
+
+        description = (analysis.get("description") or text).strip()
+
+        if not description:
+            send_bot_message(
+                conversation,
+                "Please describe the problem so I can register your complaint."
+            )
+            return
+
+        complaint = Complaint.objects.create(
+            conversation=conversation,
+            category=(analysis.get("category") or "General")[:100],
+            description=description,
+            location=(analysis.get("location") or "")[:255],
+            additional_details=analysis.get("additional_details") or "",
+            status=Complaint.Status.AWAITING_PHOTO,
+        )
+
+        warn_about_language(complaint, analysis)
+
         send_bot_message(
             conversation,
-            "Hello! I can help you report public problems such as "
-            "damaged dustbins, overflowing waste bins, broken streetlights, "
-            "or damaged roads. Please describe the problem you noticed.",
+            "I've started your complaint.\n"
+            f"Complaint ID: CMP-{complaint.complaint_id.hex[:10].upper()}\n"
+            f"Problem: {complaint.description}\n\n"
+            "Please send a clear photo showing the reported problem."
         )
+
         return
 
     description = (analysis.get("description") or text).strip()
