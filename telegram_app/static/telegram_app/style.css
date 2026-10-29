@@ -632,3 +632,110 @@ footer {
 .view-all-btn:hover {
     background: #f1f5f9;
 }
+/* Ensure hidden complaint cards stay hidden */
+.message-card[hidden],
+#message-pagination[hidden],
+#empty-state[hidden] {
+    display: none !important;
+}
+
+.pagination {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pagination-controls button {
+    padding: 8px 14px;
+    cursor: pointer;
+}
+
+.pagination-controls button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* Compact registered complaints section */
+#complaints.messages-panel {
+    padding: 16px;
+}
+
+/* Reduce header spacing */
+#complaints .panel-header {
+    margin-bottom: 12px;
+    gap: 10px;
+}
+
+#complaints .panel-header h2 {
+    font-size: 18px;
+    margin-bottom: 4px;
+}
+
+#complaints .panel-header p {
+    font-size: 12px;
+    margin: 0;
+}
+
+/* Reduce space between complaint cards */
+#complaints .complaint-list {
+    gap: 8px;
+}
+
+/* Make each complaint card smaller */
+#complaints .complaint-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+}
+
+/* Compact complaint title and status */
+#complaints .complaint-item-header {
+    margin-bottom: 5px;
+    gap: 8px;
+}
+
+#complaints .complaint-item-header strong {
+    font-size: 13px;
+}
+
+#complaints .complaint-category,
+#complaints .complaint-status {
+    font-size: 11px;
+    padding: 3px 7px;
+}
+
+/* Reduce description height and spacing */
+#complaints .complaint-description {
+    font-size: 12px;
+    line-height: 1.4;
+    margin: 4px 0 6px;
+}
+
+/* Compact name and date */
+#complaints .complaint-meta {
+    font-size: 11px;
+    gap: 8px;
+}
+
+/* Reduce pagination spacing */
+#complaints .pagination {
+    margin-top: 12px;
+    font-size: 12px;
+}
+
+#complaints .pagination-controls {
+    gap: 8px;
+}
+
+#complaints .pagination-controls button {
+    padding: 6px 10px;
+    font-size: 12px;
+}

@@ -55,6 +55,7 @@
 
             <!-- Incoming messages -->
             
+
 <section class="messages-panel" id="complaints">
     <div class="panel-header">
         <div>
@@ -67,50 +68,68 @@
         </a>
     </div>
 
-    {% if recent_complaints %}
-        <div class="complaint-list">
-            {% for complaint in recent_complaints %}
-                <a
-                    href="{% url 'complaint_detail' complaint_id=complaint.complaint_id %}"
-                    class="complaint-item"
-                >
-                    <div class="complaint-item-header">
-                        <div>
-                            <strong>
-                                CMP-{{ complaint.complaint_id.hex|slice:":10"|upper }}
-                            </strong>
-                            <span class="complaint-category">
-                                {{ complaint.category|default:"General" }}
-                            </span>
-                        </div>
+    <!-- Complaint list -->
+    <div class="complaint-list" id="message-list">
+        {% for complaint in recent_complaints %}
+            <a
+                href="{% url 'complaint_detail' complaint_id=complaint.complaint_id %}"
+                class="complaint-item message-card"
+            >
+                <div class="complaint-item-header">
+                    <div>
+                        <strong>
+                            CMP-{{ complaint.complaint_id.hex|slice:":10"|upper }}
+                        </strong>
 
-                        <span class="complaint-status status-{{ complaint.status|lower }}">
-                            {{ complaint.get_status_display }}
+                        <span class="complaint-category">
+                            {{ complaint.category|default:"General" }}
                         </span>
                     </div>
 
-                    <p class="complaint-description">
-                        {{ complaint.description|default:"No description provided" }}
-                    </p>
+                    <span class="complaint-status status-{{ complaint.status|lower }}">
+                        {{ complaint.get_status_display }}
+                    </span>
+                </div>
 
-                    <div class="complaint-meta">
-                        <span>
-                            {{ complaint.conversation.display_name }}
-                        </span>
-                        <span>
-                            {{ complaint.created_at|date:"M d, Y · h:i A" }}
-                        </span>
-                    </div>
-                </a>
-            {% endfor %}
+                <p class="complaint-description">
+                    {{ complaint.description|default:"No description provided" }}
+                </p>
+
+                <div class="complaint-meta">
+                    <span>{{ complaint.conversation.display_name }}</span>
+
+                    <span>
+                        {{ complaint.created_at|date:"M d, Y · h:i A" }}
+                    </span>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty-state" id="empty-state"
+         {% if recent_complaints %}hidden{% endif %}>
+        <div class="empty-icon">📋</div>
+        <h3>No complaints yet</h3>
+        <p>When JEMI registers a complaint, it will appear here.</p>
+    </div>
+
+    <!-- Pagination controls -->
+    <div id="message-pagination" class="pagination" hidden>
+        <p id="pagination-info">Showing 0 complaints</p>
+
+        <div class="pagination-controls">
+            <button type="button" id="prev-page" disabled>
+                Previous
+            </button>
+
+            <span id="page-indicator">Page 1 of 1</span>
+
+            <button type="button" id="next-page" disabled>
+                Next
+            </button>
         </div>
-    {% else %}
-        <div class="empty-state">
-            <div class="empty-icon">📋</div>
-            <h3>No complaints yet</h3>
-            <p>When JEMI registers a complaint, it will appear here.</p>
-        </div>
-    {% endif %}
+    </div>
 </section>
 
 

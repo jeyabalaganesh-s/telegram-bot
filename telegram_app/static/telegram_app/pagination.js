@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const pageIndicator = document.getElementById("page-indicator");
     const previousButton = document.getElementById("prev-page");
     const nextButton = document.getElementById("next-page");
+    const emptyState = document.getElementById("empty-state");
 
     if (
         !messageList ||
@@ -15,6 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
         !previousButton ||
         !nextButton
     ) {
+        console.error("Pagination elements are missing from the HTML.");
         return;
     }
 
@@ -23,8 +25,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let previousCardCount = 0;
 
     function getCards() {
-        return Array.from(messageList.children).filter(
-            (element) => element.classList.contains("message-card")
+        return Array.from(messageList.children).filter((element) =>
+            element.classList.contains("message-card")
         );
     }
 
@@ -43,18 +45,16 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         paginationInfo.textContent = total
-            ? `Showing ${startIndex + 1}–${endIndex} of ${total} messages`
-            : "Showing 0 messages";
+            ? `Showing ${startIndex + 1}–${endIndex} of ${total} complaints`
+            : "Showing 0 complaints";
 
         pageIndicator.textContent =
             `Page ${currentPage} of ${totalPages}`;
 
-        previousButton.disabled = currentPage <= 1;
+        previousButton.disabled = currentPage === 1;
         nextButton.disabled = currentPage >= totalPages;
 
-        pagination.hidden = total === 0;
-
-        const emptyState = document.getElementById("empty-state");
+        pagination.hidden = total <= pageSize;
 
         if (emptyState) {
             emptyState.hidden = total > 0;
@@ -85,8 +85,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const observer = new MutationObserver(() => {
         const currentCount = getCards().length;
 
-        // Reset to the first page when the message list is replaced
-        // or cleared. Keep the current page for ordinary additions.
         if (currentCount < previousCardCount) {
             currentPage = 1;
         }
