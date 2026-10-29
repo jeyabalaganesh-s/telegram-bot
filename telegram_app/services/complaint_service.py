@@ -13,6 +13,9 @@ from ..ai_service import (
     validate_complaint_photo,
 )
 
+import io
+from PIL import Image, UnidentifiedImageError
+
 logger = logging.getLogger(__name__)
 
 TELEGRAM_TIMEOUT = 30
@@ -82,8 +85,9 @@ def send_bot_message(conversation, text):
         return False
 
 
+
 def download_telegram_photo(file_id):
-    """Download a Telegram photo without exposing the bot token."""
+    """Download and verify a genuine image from Telegram."""
     token = getattr(settings, "TELEGRAM_BOT_TOKEN", "")
 
     if not token:
@@ -92,7 +96,7 @@ def download_telegram_photo(file_id):
     api_response = requests.get(
         f"https://api.telegram.org/bot{token}/getFile",
         params={"file_id": file_id},
-        timeout=TELEGRAM_TIMEOUT,
+        timeout=30,
     )
     api_response.raise_for_status()
 
@@ -104,33 +108,49 @@ def download_telegram_photo(file_id):
     file_path = result["result"].get("file_path")
 
     if not file_path:
-        raise RuntimeError("Telegram did not return a photo path")
-
-    # Telegram file paths returned by getFile are used here.
-    file_url = f"https://api.telegram.org/file/bot{token}/{file_path}"
+        raise RuntimeError("Telegram did not return a file path")
 
     file_response = requests.get(
-        file_url,
-        timeout=TELEGRAM_TIMEOUT,
+        f"https://api.telegram.org/file/bot{token}/{file_path}",
+        timeout=30,
     )
     file_response.raise_for_status()
 
     image_bytes = file_response.content
 
-    # Protect the AI service from unexpectedly large downloads.
+    if not image_bytes:
+        raise ValueError("Telegram returned an empty file")
+
     if len(image_bytes) > 20 * 1024 * 1024:
-        raise ValueError("The photo is too large to validate")
+        raise ValueError("The image exceeds the 20 MB limit")
 
-    mime_type = (
-        file_response.headers.get("Content-Type", "").split(";")[0].strip()
-        or mimetypes.guess_type(file_path)[0]
-        or "image/jpeg"
-    )
+    # Validate the actual image rather than trusting Content-Type.
+    try:
+        with Image.open(io.BytesIO(image_bytes)) as image:
+            image_format = image.format
+            image.verify()
+    except (UnidentifiedImageError, OSError, ValueError) as exc:
+        raise ValueError(
+            "The downloaded file is not a valid supported image"
+        ) from exc
 
-    if not mime_type.startswith("image/"):
-        raise ValueError("The uploaded file is not an image")
+    supported_formats = {
+        "JPEG": "image/jpeg",
+        "PNG": "image/png",
+        "WEBP": "image/webp",
+        "GIF": "image/gif",
+    }
+
+    mime_type = supported_formats.get(image_format)
+
+    if not mime_type:
+        raise ValueError(
+            f"Unsupported image format: {image_format}"
+        )
 
     return image_bytes, mime_type
+
+
 
 
 def warn_about_language(complaint, analysis):
