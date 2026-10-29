@@ -11,16 +11,15 @@ logger = logging.getLogger(__name__)
 
 def get_client():
     api_key = getattr(settings, "OPENAI_API_KEY", "")
+
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY is not configured")
+
     return OpenAI(api_key=api_key)
 
 
 def analyze_complaint_text(user_text):
-    """
-    Extract complaint information and detect abusive language.
-    Returns structured data instead of free-form AI text.
-    """
+    """Extract complaint information and detect abusive language."""
     client = get_client()
     model = getattr(settings, "OPENAI_MODEL", "gpt-4.1-mini")
 
@@ -33,7 +32,7 @@ def analyze_complaint_text(user_text):
                 "content": """
 You are an assistant for a public complaint management system.
 
-Understand the user's message and return JSON with these keys:
+Return JSON with these keys:
 {
   "is_complaint": true,
   "category": "short category",
@@ -44,10 +43,10 @@ Understand the user's message and return JSON with these keys:
 }
 
 Rules:
-- Do not invent facts or locations.
-- Treat ordinary frustration as different from abusive language.
-- Set abusive_language to true for insults, harassment, or abusive
-  expressions directed at a person or the service.
+- Never invent facts or locations.
+- Distinguish ordinary frustration from abusive language.
+- Set abusive_language to true for insults, harassment, or
+  abusive expressions directed at a person or service.
 - Do not reject a genuine complaint merely because the user is angry.
 - If the message is not a complaint, set is_complaint to false.
 - Return valid JSON only.
@@ -55,20 +54,27 @@ Rules:
             },
             {"role": "user", "content": user_text},
         ],
-        temperature=0,
     )
 
     content = response.choices[0].message.content
+
     if not content:
         raise ValueError("AI returned an empty response")
 
-    return json.loads(content)
+    result = json.loads(content)
+
+    if not isinstance(result, dict):
+        raise ValueError("AI returned an invalid JSON object")
+
+    return result
 
 
-def validate_complaint_photo(description, image_bytes, mime_type="image/jpeg"):
-    """
-    Check whether an image provides visual evidence for the complaint.
-    """
+def validate_complaint_photo(
+    description,
+    image_bytes,
+    mime_type="image/jpeg",
+):
+    """Check whether a photo visually supports a complaint."""
     client = get_client()
     model = getattr(settings, "OPENAI_MODEL", "gpt-4.1-mini")
 
@@ -97,7 +103,7 @@ The result must be exactly one of:
   to make a reliable decision
 
 Do not claim the photo proves facts that cannot be seen.
-Do not infer the location or identity of the person who took it.
+Do not infer the location or identity of the photographer.
 If uncertain, choose unclear.
 Return valid JSON only.
 """,
@@ -116,14 +122,17 @@ Return valid JSON only.
                 ],
             },
         ],
-        temperature=0,
     )
 
     content = response.choices[0].message.content
+
     if not content:
         raise ValueError("AI returned an empty response")
 
     result = json.loads(content)
+
+    if not isinstance(result, dict):
+        raise ValueError("AI returned an invalid JSON object")
 
     if result.get("result") not in {"valid", "invalid", "unclear"}:
         raise ValueError("AI returned an unsupported evidence result")
