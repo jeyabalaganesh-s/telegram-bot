@@ -497,3 +497,138 @@ footer {
         width: 100%;
     }
 }
+
+/* Message pagination */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid #e8ecf3;
+    color: #68758b;
+    font-size: 13px;
+}
+
+.pagination[hidden] {
+    display: none !important;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pagination-controls button {
+    padding: 9px 14px;
+    border: 1px solid #dce2ec;
+    border-radius: 9px;
+    background: #ffffff;
+    color: #172033;
+    font: inherit;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.pagination-controls button:hover:not(:disabled) {
+    background: #eaf4ff;
+}
+
+.pagination-controls button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+#page-indicator {
+    color: #172033;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.message-card[hidden] {
+    display: none !important;
+}
+
+@media (max-width: 600px) {
+    .pagination {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .pagination-controls {
+        justify-content: space-between;
+    }
+}
+
+.complaint-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.complaint-item {
+    display: block;
+    padding: 18px;
+    border: 1px solid #e5eaf2;
+    border-radius: 12px;
+    background: #fff;
+    color: inherit;
+    text-decoration: none;
+    transition: border-color 0.2s, transform 0.2s;
+}
+
+.complaint-item:hover {
+    border-color: #93b4ed;
+    transform: translateY(-1px);
+}
+
+.complaint-item-header,
+.complaint-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.complaint-category,
+.complaint-meta {
+    color: #718096;
+    font-size: 13px;
+}
+
+.complaint-category {
+    margin-left: 10px;
+}
+
+.complaint-description {
+    margin: 12px 0;
+    color: #243247;
+    line-height: 1.5;
+}
+
+.complaint-status {
+    padding: 5px 10px;
+    border-radius: 20px;
+    background: #edf2f7;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.view-all-btn {
+    display: inline-block;
+    padding: 10px 14px;
+    border: 1px solid #dce4ef;
+    border-radius: 9px;
+    color: #243247;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.view-all-btn:hover {
+    background: #f1f5f9;
+}

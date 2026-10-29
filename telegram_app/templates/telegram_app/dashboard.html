@@ -11,55 +11,17 @@
     <link rel="stylesheet" href="{% static 'telegram_app/style.css' %}">
 
     <script src="{% static 'telegram_app/dashboard.js' %}" defer></script>
+    <script src="{% static 'telegram_app/pagination.js' %}" defer></script>
 </head>
 
 <body>
     <div class="app">
 
-        <!-- Sidebar -->
-        <aside class="sidebar">
+        {% include "telegram_app/partials/sidebar.html" with active_page="dashboard" %}
 
-            <div class="brand">
-                <div class="brand-icon">J</div>
-
-                <div>
-                    <h2>JEMI</h2>
-                    <p>Telegram Dashboard</p>
-                </div>
-            </div>
-
-            <nav class="sidebar-nav">
-                <a href="{% url 'dashboard' %}" class="nav-item active">
-                    ▦ &nbsp; Dashboard
-                </a>
-
-                <a href="{% url 'conversations' %}" class="nav-item">
-                    ✉ &nbsp; Messages
-                </a>
-            </nav>
-
-            <!-- Logout -->
-            <div class="sidebar-logout">
-                <form method="post" action="{% url 'logout' %}">
-                    {% csrf_token %}
-
-                    <button type="submit" class="logout-button">
-                        ⇥ &nbsp; Logout
-                    </button>
-                </form>
-            </div>
-
-            <!-- WebSocket status -->
-            <div class="sidebar-bottom">
-                <span class="status-dot"></span>
-                <span id="connection-status">Connecting...</span>
-            </div>
-
-        </aside>
-
-        <!-- Main content -->
         <main class="main">
 
+            <!-- Page header -->
             <header class="topbar">
                 <div>
                     <h1>Telegram Dashboard</h1>
@@ -82,44 +44,75 @@
                 </article>
 
                 <article class="stat-card">
-                    <p>Messages received</p>
-                    <h2 id="message-count">0</h2>
-                    <span>During this session</span>
+                    <article class="stat-card">
+    <p>Total complaints</p>
+    <h2 id="complaint-count">{{ total_complaints }}</h2>
+    <span>Complaints registered to date</span>
+</article>
                 </article>
 
             </section>
 
             <!-- Incoming messages -->
-            <section class="messages-panel" id="messages">
+            
+<section class="messages-panel" id="complaints">
+    <div class="panel-header">
+        <div>
+            <h2>Registered Complaints</h2>
+            <p>View complaints received through JEMI on Telegram.</p>
+        </div>
 
-                <div class="panel-header">
-                    <div>
-                        <h2>Incoming messages</h2>
-                        <p>New Telegram messages appear automatically.</p>
+        <a href="{% url 'complaints_dashboard' %}" class="view-all-btn">
+            View all complaints →
+        </a>
+    </div>
+
+    {% if recent_complaints %}
+        <div class="complaint-list">
+            {% for complaint in recent_complaints %}
+                <a
+                    href="{% url 'complaint_detail' complaint_id=complaint.complaint_id %}"
+                    class="complaint-item"
+                >
+                    <div class="complaint-item-header">
+                        <div>
+                            <strong>
+                                CMP-{{ complaint.complaint_id.hex|slice:":10"|upper }}
+                            </strong>
+                            <span class="complaint-category">
+                                {{ complaint.category|default:"General" }}
+                            </span>
+                        </div>
+
+                        <span class="complaint-status status-{{ complaint.status|lower }}">
+                            {{ complaint.get_status_display }}
+                        </span>
                     </div>
 
-                    <button id="clear-button" type="button">
-                        Clear history
-                    </button>
-                </div>
-
-                <div id="empty-state" class="empty-state">
-                    <div class="empty-icon">✉</div>
-
-                    <h3>Waiting for messages</h3>
-
-                    <p>
-                        Send a message to JEMI on Telegram
-                        to see it here.
+                    <p class="complaint-description">
+                        {{ complaint.description|default:"No description provided" }}
                     </p>
-                </div>
 
-                <div id="message-list" class="message-list" data-history-url="{% url 'dashboard_messages_api' %}"
-                    aria-live="polite" aria-relevant="additions"></div>
+                    <div class="complaint-meta">
+                        <span>
+                            {{ complaint.conversation.display_name }}
+                        </span>
+                        <span>
+                            {{ complaint.created_at|date:"M d, Y · h:i A" }}
+                        </span>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">📋</div>
+            <h3>No complaints yet</h3>
+            <p>When JEMI registers a complaint, it will appear here.</p>
+        </div>
+    {% endif %}
+</section>
 
-
-
-            </section>
 
             <footer>
                 JEMI Dashboard · Django + Channels

@@ -502,46 +502,7 @@
 <div class="app">
 
     <!-- Sidebar -->
-    <aside class="sidebar">
-
-        <div class="brand">
-            <div class="brand-icon">J</div>
-
-            <div>
-                <h2>JEMI</h2>
-                <p>Telegram Dashboard</p>
-            </div>
-        </div>
-
-        <nav class="sidebar-nav">
-            <a href="{% url 'dashboard' %}" class="nav-item">
-                ▦ &nbsp; Dashboard
-            </a>
-
-            <a href="{% url 'conversations' %}" class="nav-item active">
-                ✉ &nbsp; Messages
-            </a>
-        </nav>
-
-        <!-- Logout -->
-        <div class="sidebar-logout">
-            <form method="post" action="{% url 'logout' %}">
-                {% csrf_token %}
-
-                <button type="submit" class="logout-button">
-                    ⇥ &nbsp; Logout
-                </button>
-            </form>
-        </div>
-
-        <!-- WebSocket status -->
-        <div class="sidebar-bottom">
-            <span class="status-dot" id="connection-dot"></span>
-            <span id="connection-status">Connecting...</span>
-        </div>
-
-    </aside>
-    
+{% include "telegram_app/partials/sidebar.html" with active_page="conversations" %}    
 
 <!-- Chat page conversation list -->
 <aside class="chat-conversation-sidebar">

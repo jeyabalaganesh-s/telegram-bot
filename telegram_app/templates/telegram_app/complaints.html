@@ -1,0 +1,666 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complaints | JEMI</title>
+
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #0b1120;
+            --panel: #151e2f;
+            --border: #29364b;
+            --text: #e8edf5;
+            --muted: #91a0b7;
+            --accent: #38bdf8;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Inter, "Segoe UI", Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .page {
+            max-width: 1600px;
+            margin: auto;
+            padding: 28px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 28px;
+        }
+
+        .brand {
+            font-size: 25px;
+            font-weight: 750;
+        }
+
+        .brand span {
+            color: var(--accent);
+        }
+
+        .subtitle {
+            color: var(--muted);
+            margin-top: 7px;
+            font-size: 14px;
+        }
+
+        .nav-link {
+            display: inline-block;
+            padding: 10px 15px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            color: var(--text);
+            text-decoration: none;
+            background: var(--panel);
+        }
+
+        h1 {
+            font-size: 27px;
+            margin: 0 0 8px;
+        }
+
+        .intro {
+            color: var(--muted);
+            margin-bottom: 24px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat, .panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+        }
+
+        .stat {
+            padding: 20px;
+        }
+
+        .stat-label {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .stat-value {
+            font-size: 29px;
+            font-weight: 750;
+            margin-top: 10px;
+        }
+
+        .panel {
+            padding: 20px;
+        }
+
+        .filters {
+            display: grid;
+            grid-template-columns: minmax(200px, 1fr) minmax(180px, 260px) auto auto;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        input, select, button {
+            font: inherit;
+            border-radius: 9px;
+            padding: 11px 13px;
+        }
+
+        input, select {
+            width: 100%;
+            background: #0c1423;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        button {
+            border: 0;
+            background: var(--accent);
+            color: #062033;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .reset {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1050px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 15px 12px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        th {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 650;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+        }
+
+        td {
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        tbody tr:hover {
+            background: #1b273b;
+        }
+
+        .complaint-id {
+            color: var(--accent);
+            font-size: 12px;
+            overflow-wrap: anywhere;
+        }
+
+        .description {
+            min-width: 200px;
+            max-width: 330px;
+            overflow-wrap: anywhere;
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 20px;
+            background: #263449;
+            color: #dce8f8;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .pending {
+            background: #49371c;
+            color: #fbd38d;
+        }
+
+        .approved, .valid {
+            background: #153e35;
+            color: #86efac;
+        }
+
+        .rejected, .invalid {
+            background: #48242c;
+            color: #fda4af;
+        }
+
+        .empty {
+            text-align: center;
+            color: var(--muted);
+            padding: 45px 15px;
+        }
+
+        .result-count {
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 14px;
+        }
+
+        @media (max-width: 900px) {
+            .stats {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .filters {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .page {
+                padding: 18px;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .stats, .filters {
+                grid-template-columns: 1fr;
+            }
+
+            .page {
+                padding: 13px;
+            }
+
+            .stat {
+                padding: 16px;
+            }
+        }
+        
+/* Main application layout */
+.app-layout {
+    min-height: 100vh;
+}
+
+/* Fixed sidebar */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 250px;
+    display: flex;
+    flex-direction: column;
+    padding: 24px 16px 12px;
+    background: #111a2a;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    z-index: 100;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 8px;
+    margin-bottom: 35px;
+}
+
+.brand-icon {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: var(--accent);
+    color: #062033;
+    font-size: 23px;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.brand h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.brand p {
+    margin: 5px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    color: var(--muted);
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s;
+}
+
+.nav-item:hover {
+    background: var(--panel-hover, #1b273b);
+    color: var(--text);
+}
+
+.nav-item.active {
+    background: #17314a;
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.nav-icon {
+    width: 20px;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.sidebar-logout {
+    margin-top: auto;
+    padding-top: 24px;
+}
+
+.sidebar-logout form {
+    width: 100%;
+}
+
+.logout-button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 14px;
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    color: var(--muted);
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+}
+
+.logout-button:hover {
+    background: #48242c;
+    color: #fda4af;
+}
+
+.sidebar-bottom {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 18px 14px 8px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #fbbf24;
+    flex-shrink: 0;
+}
+
+/* Main content beside sidebar */
+.main-content {
+    min-width: 0;
+    margin-left: 250px;
+}
+
+.page {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 28px;
+}
+
+/* Responsive layout */
+@media (max-width: 900px) {
+    .sidebar {
+        width: 220px;
+    }
+
+    .main-content {
+        margin-left: 220px;
+    }
+
+    .page {
+        padding: 18px;
+    }
+}
+
+@media (max-width: 650px) {
+    .app-layout {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .sidebar {
+        position: relative;
+        inset: auto;
+        width: 100%;
+        min-height: auto;
+        padding: 14px;
+        overflow: visible;
+    }
+
+    .brand {
+        margin-bottom: 16px;
+    }
+
+    .sidebar-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .nav-item {
+        flex: 1 1 auto;
+        justify-content: center;
+        padding: 10px;
+    }
+
+    .sidebar-logout {
+        margin-top: 12px;
+        padding-top: 0;
+    }
+
+    .sidebar-bottom {
+        padding: 12px 8px 4px;
+    }
+
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .page {
+        padding: 16px 12px;
+    }
+}
+
+    </style>
+</head>
+
+
+<body>
+<div class="app-layout">
+
+    {% include "telegram_app/partials/sidebar.html" with active_page="complaints" %}
+
+    <div class="main-content">
+        <div class="page">
+
+
+    <header class="topbar">
+        <div>
+            <div class="brand">JEMI <span>●</span></div>
+            <div class="subtitle">Complaint Management System</div>
+        </div>
+
+        <a class="nav-link" href="/">← Back to Dashboard</a>
+    </header>
+
+    <main>
+        <h1>Complaints</h1>
+        <p class="intro">
+            Review public problem reports submitted through your Telegram bot.
+        </p>
+
+        <section class="stats">
+            <div class="stat">
+                <div class="stat-label">Total Complaints</div>
+                <div class="stat-value">{{ total_complaints }}</div>
+            </div>
+
+            <div class="stat">
+                <div class="stat-label">Pending Review</div>
+                <div class="stat-value">{{ pending_complaints }}</div>
+            </div>
+
+            <div class="stat">
+                <div class="stat-label">Awaiting Photo</div>
+                <div class="stat-value">{{ awaiting_photo }}</div>
+            </div>
+
+            <div class="stat">
+                <div class="stat-label">Approved</div>
+                <div class="stat-value">{{ approved_complaints }}</div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <form method="get" class="filters">
+                <input
+                    type="search"
+                    name="q"
+                    value="{{ search_query }}"
+                    placeholder="Search description, location, category or user..."
+                >
+
+                <select name="status">
+                    <option value="">All statuses</option>
+                    {% for value, label in status_choices %}
+                        <option
+                            value="{{ value }}"
+                            {% if selected_status == value %}selected{% endif %}
+                        >
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <button type="submit">Search / Filter</button>
+                <a class="reset" href="{% url 'complaints_dashboard' %}">
+                    Reset
+                </a>
+            </form>
+
+            <div class="result-count">
+                {{ complaints|length }} complaint{{ complaints|length|pluralize }}
+                shown
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Complaint</th>
+                        <th>Problem</th>
+                        <th>Reporter</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Photo Check</th>
+                        <th>Submitted</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    {% for complaint in complaints %}
+                        <tr>
+                            <td>
+                                <div class="complaint-id">
+                                    CMP-{{ complaint.complaint_id.hex|upper|slice:":10" }}
+                                </div>
+                                <div class="muted">{{ complaint.category }}</div>
+                            </td>
+
+                            <td>
+                                <div class="description">
+                                    {{ complaint.description|default:"No description provided" }}
+                                </div>
+                                {% if complaint.additional_details %}
+                                    <div class="muted">
+                                        Details: {{ complaint.additional_details }}
+                                    </div>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ complaint.conversation.display_name|default:"Telegram user" }}
+                                {% if complaint.conversation.username %}
+                                    <div class="muted">
+                                        @{{ complaint.conversation.username }}
+                                    </div>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ complaint.location|default:"Not provided" }}
+                            </td>
+
+                            <td>
+                                <span class="badge
+                                    {% if complaint.status == 'APPROVED' %}approved
+                                    {% elif complaint.status == 'REJECTED' %}rejected
+                                    {% elif complaint.status == 'PENDING_REVIEW' %}pending
+                                    {% endif %}">
+                                    {{ complaint.get_status_display }}
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="badge
+                                    {% if complaint.evidence_result == 'VALID' %}valid
+                                    {% elif complaint.evidence_result == 'INVALID' %}invalid
+                                    {% endif %}">
+                                    {{ complaint.get_evidence_result_display }}
+                                </span>
+
+                                {% if complaint.evidence_notes %}
+                                    <div class="muted">
+                                        {{ complaint.evidence_notes }}
+                                    </div>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ complaint.created_at|date:"d M Y" }}
+                                <div class="muted">
+                                    {{ complaint.created_at|date:"h:i A" }}
+                                </div>
+                            </td>
+                            <td>
+                                <a href="{% url 'complaint_detail' complaint_id=complaint.complaint_id %}">
+                                    View details →
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="empty">
+                                No complaints found. Try changing your search
+                                or status filter.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+   
+</main>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -272,6 +272,7 @@
                 font-size: 10px;
             }
         }
+        
     </style>
 </head>
 
@@ -296,6 +297,9 @@
             <a href="{% url 'conversations' %}" class="nav-item active">
                 ✉ &nbsp; Messages
             </a>
+                <a href="{% url 'complaints_dashboard' %}" class="nav-item">
+                    📋 &nbsp; Complaints
+                </a>
         </nav>
 
         <div class="sidebar-logout">
@@ -422,4 +426,3 @@
 </div>
 </body>
 </html>
-    

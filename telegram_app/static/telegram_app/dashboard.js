@@ -72,6 +72,32 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+
+
+    async function updateComplaintCount() {
+        try {
+            const response = await fetch(
+                "/dashboard/complaints-count/",
+                {
+                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                }
+            );
+
+            if (!response.ok) return;
+
+            const data = await response.json();
+            const countElement = document.getElementById("complaint-count");
+
+            if (countElement) {
+                countElement.textContent = data.total_complaints;
+            }
+        } catch (error) {
+            console.error("Failed to update complaint count:", error);
+        }
+    }
+
+    updateComplaintCount();
+    setInterval(updateComplaintCount, 10000);
     function renderMessage(message, prepend = false) {
         // Ignore outgoing messages on the incoming-message dashboard.
         if (

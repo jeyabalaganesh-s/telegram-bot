@@ -1,0 +1,894 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Complaint Details | JEMI</title>
+
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #0b1120;
+            --panel: #151e2f;
+            --panel-hover: #1b273b;
+            --border: #29364b;
+            --text: #e8edf5;
+            --muted: #91a0b7;
+            --accent: #38bdf8;
+            --success: #86efac;
+            --success-bg: #153e35;
+            --danger: #fda4af;
+            --danger-bg: #48242c;
+            --warning: #fbd38d;
+            --warning-bg: #49371c;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+        }
+
+        a {
+            color: var(--accent);
+        }
+
+        .page {
+            width: 100%;
+            max-width: 1500px;
+            margin: 0 auto;
+            padding: 28px;
+        }
+
+        /* Header */
+
+        .back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 25px;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .back:hover {
+            text-decoration: underline;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 25px;
+        }
+
+        .page-header h1 {
+            margin: 0 0 10px;
+            font-size: 28px;
+            line-height: 1.3;
+        }
+
+        .complaint-reference {
+            color: var(--muted);
+            overflow-wrap: anywhere;
+        }
+
+        .header-status {
+            display: inline-block;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: #263449;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Notifications */
+
+        .message {
+            padding: 13px 15px;
+            border-radius: 9px;
+            margin-bottom: 18px;
+            line-height: 1.5;
+            background: var(--success-bg);
+            border: 1px solid #276653;
+            color: var(--success);
+        }
+
+        .message.error {
+            background: var(--danger-bg);
+            border-color: #8e3a48;
+            color: var(--danger);
+        }
+
+        .message.warning {
+            background: var(--warning-bg);
+            border-color: #785b2a;
+            color: var(--warning);
+        }
+
+        /* Main layout */
+
+        .grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(340px, 0.9fr);
+            gap: 24px;
+            align-items: start;
+        }
+
+        .left-column,
+        .right-column {
+            min-width: 0;
+        }
+
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: sticky;
+            top: 20px;
+        }
+
+        /* Cards */
+
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 24px;
+            min-width: 0;
+            margin-bottom: 20px;
+        }
+
+        .right-column .card {
+            margin-bottom: 0;
+        }
+
+        .card h2 {
+            margin: 0 0 23px;
+            font-size: 20px;
+            line-height: 1.4;
+        }
+
+        .card-description {
+            color: var(--muted);
+            margin: -10px 0 20px;
+            line-height: 1.6;
+        }
+
+        /* Complaint details */
+
+        .field {
+            margin-bottom: 23px;
+            min-width: 0;
+        }
+
+        .field:last-child {
+            margin-bottom: 0;
+        }
+
+        .label {
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 650;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 8px;
+        }
+
+        .value {
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .reporter-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            line-height: 1.5;
+        }
+
+        .reporter-display-name {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .reporter-handle {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        /* Badges */
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 7px 11px;
+            border-radius: 7px;
+            background: #263449;
+            color: #dce8f8;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .badge.valid,
+        .badge.approved {
+            background: var(--success-bg);
+            color: var(--success);
+        }
+
+        .badge.invalid,
+        .badge.rejected {
+            background: var(--danger-bg);
+            color: var(--danger);
+        }
+
+        .badge.pending {
+            background: var(--warning-bg);
+            color: var(--warning);
+        }
+
+        .badge.unclear {
+            background: #34304e;
+            color: #c4b5fd;
+        }
+
+        .evidence-result {
+            margin-top: 10px;
+        }
+
+        .evidence-notes {
+            margin: 12px 0 0;
+            color: var(--muted);
+            line-height: 1.7;
+            overflow-wrap: anywhere;
+        }
+
+        /* Photo evidence */
+
+        .evidence-container {
+            overflow: hidden;
+            background: #080d17;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+
+        .evidence-image {
+            display: block;
+            width: 100%;
+            max-height: 520px;
+            object-fit: contain;
+            background: #080d17;
+        }
+
+        .evidence-caption {
+            padding: 12px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.5;
+            border-top: 1px solid var(--border);
+        }
+
+        .no-evidence {
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 10px;
+            padding: 25px;
+            border: 1px dashed var(--border);
+            border-radius: 10px;
+            color: var(--muted);
+        }
+
+        .no-evidence-icon {
+            font-size: 35px;
+        }
+
+        /* Form */
+
+        .form-group {
+            margin-bottom: 19px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 9px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        input,
+        select,
+        textarea,
+        button {
+            width: 100%;
+            font: inherit;
+            border-radius: 9px;
+        }
+
+        input,
+        select,
+        textarea {
+            background: #0c1423;
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 12px 13px;
+            outline: none;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px #38bdf826;
+        }
+
+        select {
+            cursor: pointer;
+        }
+
+        textarea {
+            min-height: 125px;
+            resize: vertical;
+            line-height: 1.6;
+        }
+
+        .form-help {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .save-button {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            padding: 13px 18px;
+            border: 0;
+            background: var(--accent);
+            color: #062033;
+            font-weight: 750;
+            cursor: pointer;
+            transition: filter 0.2s ease;
+        }
+
+        .save-button:hover {
+            filter: brightness(1.08);
+        }
+
+        .review-warning {
+            margin-top: 15px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        /* Responsive */
+
+        @media (max-width: 900px) {
+            .page {
+                padding: 22px 16px;
+            }
+
+            .grid {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .right-column {
+                position: static;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .page {
+                padding: 16px 12px;
+            }
+
+            .page-header h1 {
+                font-size: 23px;
+            }
+
+            .card {
+                padding: 18px;
+            }
+
+            .card h2 {
+                font-size: 18px;
+            }
+        }
+
+        
+/* Application layout */
+.app-layout {
+    min-height: 100vh;
+}
+
+.sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 250px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 24px 16px 12px;
+    background: #111a2a;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    z-index: 100;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 8px;
+    margin-bottom: 35px;
+}
+
+.brand-icon {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: var(--accent);
+    color: #062033;
+    font-size: 23px;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.brand h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.brand p {
+    margin: 5px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    color: var(--muted);
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s;
+}
+
+.nav-item:hover {
+    background: var(--panel-hover);
+    color: var(--text);
+}
+
+.nav-item.active {
+    background: #17314a;
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.nav-icon {
+    width: 20px;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.sidebar-logout {
+    margin-top: auto;
+    padding-top: 24px;
+}
+
+.sidebar-logout form {
+    width: 100%;
+}
+
+.logout-button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 14px;
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    color: var(--muted);
+    text-align: left;
+    cursor: pointer;
+}
+
+.logout-button:hover {
+    background: #48242c;
+    color: #fda4af;
+}
+
+.sidebar-bottom {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 18px 14px 8px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #fbbf24;
+    flex-shrink: 0;
+}
+
+/* Main content beside the sidebar */
+.main-content {
+    min-width: 0;
+    margin-left: 250px;
+}
+
+.page {
+    width: 100%;
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 28px;
+}
+
+/* Responsive layout */
+@media (max-width: 900px) {
+    .sidebar {
+        width: 220px;
+    }
+
+    .main-content {
+        margin-left: 220px;
+    }
+
+    .page {
+        padding: 22px 16px;
+    }
+
+    .grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .right-column {
+        position: static;
+    }
+}
+
+@media (max-width: 650px) {
+    .app-layout {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .sidebar {
+        position: relative;
+        inset: auto;
+        width: 100%;
+        min-height: auto;
+        padding: 14px;
+        overflow: visible;
+    }
+
+    .brand {
+        margin-bottom: 16px;
+    }
+
+    .sidebar-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .nav-item {
+        flex: 1 1 auto;
+        justify-content: center;
+        padding: 10px;
+    }
+
+    .sidebar-logout {
+        margin-top: 12px;
+        padding-top: 0;
+    }
+
+    .sidebar-bottom {
+        padding: 12px 8px 4px;
+    }
+
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .page {
+        padding: 16px 12px;
+    }
+
+    .page-header h1 {
+        font-size: 23px;
+    }
+
+    .card {
+        padding: 18px;
+    }
+
+    .card h2 {
+        font-size: 18px;
+    }
+}
+
+    </style>
+</head>
+
+<body>
+<div class="app-layout">
+
+    {% include "telegram_app/partials/sidebar.html" with active_page="complaints" %}
+
+    <div class="main-content">
+        <div class="page">
+    <a class="back" href="{% url 'complaints_dashboard' %}">
+        <span aria-hidden="true">←</span>
+        Back to complaints
+    </a>
+
+    <header class="page-header">
+        <div>
+            <h1>Complaint details</h1>
+            <div class="complaint-reference">
+                CMP-{{ complaint.complaint_id.hex|upper|slice:":10" }}
+            </div>
+        </div>
+
+        <div>
+            <span class="header-status">
+                {{ complaint.get_status_display }}
+            </span>
+        </div>
+    </header>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="message
+                {% if 'error' in message.tags %}error
+                {% elif 'warning' in message.tags %}warning
+                {% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="grid">
+
+        <!-- LEFT COLUMN: Complaint details -->
+        <section class="left-column">
+
+            <div class="card">
+                <h2>Reported problem</h2>
+
+                <div class="field">
+                    <div class="label">Category</div>
+                    <div class="value">
+                        {{ complaint.category|default:"Not provided" }}
+                    </div>
+                </div>
+
+                <div class="field">
+                    <div class="label">Description</div>
+                    <div class="value">{{ complaint.description|default:"Not provided" }}</div>
+                </div>
+
+                <div class="field">
+                    <div class="label">Additional details</div>
+                    <div class="value">{{ complaint.additional_details|default:"None provided" }}</div>
+                </div>
+
+                <div class="field">
+                    <div class="label">Location</div>
+                    <div class="value">{{ complaint.location|default:"Not provided" }}</div>
+                </div>
+
+                <div class="field">
+                    <div class="label">Reporter</div>
+
+                    <div class="reporter-info">
+                        <span class="reporter-display-name">
+                            {{ complaint.conversation.display_name|default:"Telegram user" }}
+                        </span>
+
+                        {% if complaint.conversation.username %}
+                            <span class="reporter-handle">
+                                @{{ complaint.conversation.username }}
+                            </span>
+                        {% endif %}
+
+                        <span class="reporter-handle">
+                            Telegram Chat ID: {{ complaint.conversation.chat_id }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <div class="label">Submitted</div>
+                    <div class="value">
+                        {{ complaint.created_at|date:"d M Y, h:i A" }}
+                    </div>
+                </div>
+
+                <div class="field">
+                    <div class="label">Last updated</div>
+                    <div class="value">
+                        {{ complaint.updated_at|date:"d M Y, h:i A" }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Evidence verification</h2>
+
+                <div class="evidence-result">
+                    {% if complaint.evidence_result == "VALID" %}
+                        <span class="badge valid">
+                            ✓ {{ complaint.get_evidence_result_display }}
+                        </span>
+                    {% elif complaint.evidence_result == "INVALID" %}
+                        <span class="badge rejected">
+                            ✕ {{ complaint.get_evidence_result_display }}
+                        </span>
+                    {% elif complaint.evidence_result == "UNCLEAR" %}
+                        <span class="badge unclear">
+                            ? {{ complaint.get_evidence_result_display }}
+                        </span>
+                    {% else %}
+                        <span class="badge">
+                            {{ complaint.get_evidence_result_display|default:"Not checked" }}
+                        </span>
+                    {% endif %}
+
+                    {% if complaint.evidence_notes %}
+                        <p class="evidence-notes">
+                            {{ complaint.evidence_notes }}
+                        </p>
+                    {% else %}
+                        <p class="evidence-notes">
+                            No evidence verification notes available.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if complaint.admin_notes %}
+                <div class="card">
+                    <h2>Administrator notes</h2>
+                    <div class="value">{{ complaint.admin_notes }}</div>
+                </div>
+            {% endif %}
+
+        </section>
+
+        <!-- RIGHT COLUMN: Photo and review form -->
+        <aside class="right-column">
+
+            <div class="card">
+                <h2>Photo evidence</h2>
+
+                {% if complaint.evidence_file_id %}
+                    <div class="evidence-container">
+                        <a
+                            href="{% url 'complaint_evidence' complaint_id=complaint.complaint_id %}"
+                            target="_blank"
+                            rel="noopener"
+                            aria-label="Open complaint photo in a new tab"
+                        >
+                            <img
+                                class="evidence-image"
+                                src="{% url 'complaint_evidence' complaint_id=complaint.complaint_id %}"
+                                alt="Photo evidence for complaint CMP-{{ complaint.complaint_id.hex|upper|slice:':10' }}"
+                                loading="lazy"
+                            >
+                        </a>
+
+                        <div class="evidence-caption">
+                            Click the image to open it in a separate tab.
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="no-evidence">
+                        <div class="no-evidence-icon" aria-hidden="true">📷</div>
+                        <strong>No photo evidence</strong>
+                        <span>The reporter has not submitted a photo for this complaint.</span>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="card">
+                <h2>Review and update</h2>
+
+                <p class="card-description">
+                    Update the complaint status and record the action taken.
+                </p>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="form-group">
+                        <label for="status">Complaint status</label>
+
+                        <select id="status" name="status" required>
+                            {% for value, label in status_choices %}
+                                <option
+                                    value="{{ value }}"
+                                    {% if complaint.status == value %}selected{% endif %}
+                                >
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="admin_notes">Administrator notes</label>
+
+                        <textarea
+                            id="admin_notes"
+                            name="admin_notes"
+                            placeholder="Describe the action taken or resolution..."
+                        >{{ complaint.admin_notes|default:"" }}</textarea>
+
+                        <div class="form-help">
+                            These notes are saved with the complaint.
+                            If you close the complaint, the notes are also
+                            included in the Telegram resolution notification.
+                        </div>
+                    </div>
+
+                    <button class="save-button" type="submit">
+                        Save changes
+                    </button>
+                </form>
+
+                <div class="review-warning">
+                    <strong>Resolution notification</strong><br>
+                    When you change the status to Closed, JEMI attempts to
+                    notify the reporter through Telegram. If delivery fails,
+                    check the notification message and server logs.
+                </div>
+            </div>
+
+        </aside>
+
+    </div>
+</div>  
+</div>
+</body>
+</html>

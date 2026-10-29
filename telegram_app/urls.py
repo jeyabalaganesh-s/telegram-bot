@@ -30,4 +30,24 @@ urlpatterns = [
         views.dashboard_messages_api,
         name="dashboard_messages_api",
     ),
+    path(
+        "complaints/",
+        views.complaints_dashboard,
+        name="complaints_dashboard",
+    ),
+    path(
+        "complaints/<uuid:complaint_id>/",
+        views.complaint_detail,
+        name="complaint_detail",
+    ),
+    path(
+        "complaints/<uuid:complaint_id>/evidence/",
+        views.complaint_evidence,
+        name="complaint_evidence",
+    ),
+    path(
+        "dashboard/complaints-count/",
+        views.dashboard_complaints_count,
+        name="dashboard_complaints_count",
+    ),
 ]
