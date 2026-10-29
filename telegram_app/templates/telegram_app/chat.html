@@ -156,7 +156,192 @@
             .chat-composer button {
                 padding: 12px 15px;
             }
+            
         }
+        
+/* Chat page conversation list — isolated styles */
+.chat-conversation-sidebar {
+    min-width: 0;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-right: 1px solid #e8edf4;
+    overflow: hidden;
+}
+
+.chat-conversation-header {
+    flex-shrink: 0;
+    padding: 18px 18px 14px;
+    border-bottom: 1px solid #edf0f5;
+}
+
+.chat-conversation-header h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.chat-conversation-header p {
+    margin-top: 5px;
+    color: #8994a7;
+    font-size: 13px;
+}
+
+.chat-conversation-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.chat-conversation-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 16px;
+    color: #243047;
+    text-decoration: none;
+    border-bottom: 1px solid #f0f2f6;
+    transition: background 0.15s ease;
+}
+
+.chat-conversation-item:last-child {
+    border-bottom: none;
+}
+
+.chat-conversation-item:hover {
+    background: #f5f8fc;
+}
+
+.chat-conversation-item.selected {
+    background: #eaf4ff;
+    border-left: 3px solid #2688d9;
+    padding-left: 13px;
+}
+
+.chat-conversation-avatar {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #eaf4ff;
+    color: #1875c5;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.chat-conversation-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.chat-conversation-info strong {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 14px;
+}
+
+.chat-conversation-info p {
+    margin-top: 5px;
+    color: #8994a7;
+    font-size: 12px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.chat-no-conversations {
+    padding: 20px;
+    color: #8994a7;
+    font-size: 14px;
+}
+
+@media (max-width: 1000px) {
+    .chat-conversation-item {
+        gap: 10px;
+        padding: 12px;
+    }
+}
+
+@media (max-width: 700px) {
+    .chat-conversation-sidebar {
+        display: none;
+    }
+}
+
+/* Keep media inside the chat bubble */
+#chat-history {
+    width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+}
+
+.message-bubble {
+    max-width: 80%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.message-media {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.message-media a {
+    display: block;
+    max-width: 100%;
+}
+
+.message-media img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 320px;
+    object-fit: contain;
+    border-radius: 10px;
+}
+
+.message-media video {
+    display: block;
+    width: 100%;
+    max-width: 420px;
+    height: auto;
+    max-height: 320px;
+    object-fit: contain;
+    border-radius: 10px;
+}
+
+.message-media audio {
+    display: block;
+    width: 100%;
+    max-width: 320px;
+}
+
+@media (max-width: 700px) {
+    .message-bubble {
+        max-width: 92%;
+    }
+
+    .message-media img {
+        max-height: 240px;
+    }
+}
+
+        .app {
+        display: grid;
+        grid-template-columns: 220px 320px minmax(0, 1fr);
+        height: 100vh;
+        min-height: 0;
+        overflow: hidden;
+    }
     </style>
 </head>
 
@@ -204,24 +389,25 @@
 
     </aside>
     
-<!-- Conversation list -->
-<aside class="conversation-sidebar">
-    <div class="conversation-header">
+
+<!-- Chat page conversation list -->
+<aside class="chat-conversation-sidebar">
+    <div class="chat-conversation-header">
         <h2>Messages</h2>
         <p>Your Telegram conversations</p>
     </div>
 
-    <div class="conversation-list">
+    <div class="chat-conversation-list">
         {% for item in conversations %}
             <a
                 href="{% url 'telegram_chat' item.chat_id %}"
-                class="conversation-item {% if item.chat_id == conversation.chat_id %}selected{% endif %}"
+                class="chat-conversation-item {% if item.chat_id == conversation.chat_id %}selected{% endif %}"
             >
-                <div class="conversation-avatar">
+                <div class="chat-conversation-avatar">
                     {{ item.display_name|slice:":1"|upper }}
                 </div>
 
-                <div class="conversation-info">
+                <div class="chat-conversation-info">
                     <strong>{{ item.display_name }}</strong>
 
                     {% with latest=item.messages.last %}
@@ -239,7 +425,7 @@
                 </div>
             </a>
         {% empty %}
-            <p class="no-conversations">
+            <p class="chat-no-conversations">
                 No conversations yet.
             </p>
         {% endfor %}
@@ -250,7 +436,7 @@
     <!-- Main chat content -->
     <main class="main">
 
-        <header class="topbar">
+        <!-- <header class="topbar">
             <div class="chat-user">
                 <div class="chat-avatar">
                     {{ conversation.display_name|slice:":1"|upper }}
@@ -271,11 +457,11 @@
                 <span class="status-dot"></span>
                 JEMI Bot
             </div>
-        </header>
+        </header> -->
 
         <section class="messages-panel chat-layout">
 
-            <div class="panel-header">
+            <!-- <div class="panel-header">
                 <div>
                     <h2>Conversation</h2>
                     <p>Your messages with {{ conversation.display_name }}</p>
@@ -284,7 +470,7 @@
                 <a href="{% url 'conversations' %}">
                     ← All messages
                 </a>
-            </div>
+            </div> -->
 
             <!-- Message history -->
             <div
@@ -409,9 +595,6 @@
 
         </section>
 
-        <footer>
-            JEMI Dashboard · Django + Channels
-        </footer>
 
     </main>
 </div>
