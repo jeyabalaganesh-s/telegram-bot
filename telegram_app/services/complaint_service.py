@@ -1,23 +1,15 @@
 
+import io
 import logging
-import mimetypes
 
 import requests
-
-from django.conf import settings
-from django.utils import timezone
-
-from ..models import Complaint, TelegramMessage
-from ..ai_service import (
-    analyze_complaint_text,
-    validate_complaint_photo,
-)
-
-import io
 from PIL import Image, UnidentifiedImageError
+from django.conf import settings
+
+from ..ai_service import analyze_complaint_text, validate_complaint_photo
+from ..models import Complaint, TelegramMessage
 
 logger = logging.getLogger(__name__)
-
 TELEGRAM_TIMEOUT = 30
 
 
@@ -36,10 +28,22 @@ def get_latest_active_complaint(conversation):
     )
 
 
-def send_bot_message(conversation, text):
-    """Send a Telegram reply and save it in the existing chat history."""
-    token = getattr(settings, "TELEGRAM_BOT_TOKEN", "")
+def is_simple_greeting(text):
+    """Recognize greetings and short social messages."""
+    normalized = " ".join(
+        (text or "").lower().strip().strip(".,!?;:").split()
+    )
+    return normalized in {
+        "hi", "hii", "hiii", "hello", "hey",
+        "hello jemi", "hi jemi",
+        "good morning", "good afternoon", "good evening",
+        "how are you", "thanks", "thank you", "ok", "okay",
+    }
 
+
+def send_bot_message(conversation, text):
+    """Send a Telegram reply, save it, and broadcast it to the dashboard."""
+    token = getattr(settings, "TELEGRAM_BOT_TOKEN", "")
     if not token:
         logger.error("TELEGRAM_BOT_TOKEN is not configured")
         return False
@@ -47,10 +51,7 @@ def send_bot_message(conversation, text):
     try:
         response = requests.post(
             f"https://api.telegram.org/bot{token}/sendMessage",
-            json={
-                "chat_id": conversation.chat_id,
-                "text": text,
-            },
+            json={"chat_id": conversation.chat_id, "text": text},
             timeout=TELEGRAM_TIMEOUT,
         )
         response.raise_for_status()
@@ -71,9 +72,7 @@ def send_bot_message(conversation, text):
             telegram_file_id="",
         )
 
-        # Reuse your existing real-time dashboard broadcast.
         from ..views import broadcast_message
-
         broadcast_message(saved_message)
         return True
 
@@ -85,34 +84,30 @@ def send_bot_message(conversation, text):
         return False
 
 
-
 def download_telegram_photo(file_id):
-    """Download and verify a genuine image from Telegram."""
+    """Download a Telegram file and verify it is a supported image."""
     token = getattr(settings, "TELEGRAM_BOT_TOKEN", "")
-
     if not token:
         raise RuntimeError("TELEGRAM_BOT_TOKEN is not configured")
 
     api_response = requests.get(
         f"https://api.telegram.org/bot{token}/getFile",
         params={"file_id": file_id},
-        timeout=30,
+        timeout=TELEGRAM_TIMEOUT,
     )
     api_response.raise_for_status()
-
     result = api_response.json()
 
     if not result.get("ok"):
         raise RuntimeError("Telegram could not retrieve the photo")
 
-    file_path = result["result"].get("file_path")
-
+    file_path = result.get("result", {}).get("file_path")
     if not file_path:
         raise RuntimeError("Telegram did not return a file path")
 
     file_response = requests.get(
         f"https://api.telegram.org/file/bot{token}/{file_path}",
-        timeout=30,
+        timeout=TELEGRAM_TIMEOUT,
     )
     file_response.raise_for_status()
 
@@ -124,7 +119,6 @@ def download_telegram_photo(file_id):
     if len(image_bytes) > 20 * 1024 * 1024:
         raise ValueError("The image exceeds the 20 MB limit")
 
-    # Validate the actual image rather than trusting Content-Type.
     try:
         with Image.open(io.BytesIO(image_bytes)) as image:
             image_format = image.format
@@ -142,45 +136,45 @@ def download_telegram_photo(file_id):
     }
 
     mime_type = supported_formats.get(image_format)
-
     if not mime_type:
-        raise ValueError(
-            f"Unsupported image format: {image_format}"
-        )
+        raise ValueError(f"Unsupported image format: {image_format}")
 
     return image_bytes, mime_type
 
 
-
-
 def warn_about_language(complaint, analysis):
-    """Warn politely while allowing genuine complaints to continue."""
+    """Record and send a warning when abusive language is detected."""
     if not analysis.get("abusive_language"):
-        return
+        return False
 
     complaint.language_warning_count += 1
     complaint.save(
-        update_fields=[
-            "language_warning_count",
-            "updated_at",
-        ]
+        update_fields=["language_warning_count", "updated_at"]
     )
 
     send_bot_message(
         complaint.conversation,
         "Please keep the conversation respectful. "
-        "I can still help you register your complaint.",
+        "I can still help you report a public problem.",
     )
+    return True
 
 
 def process_complaint_text(conversation, user_text):
-    """Interpret text as a new complaint or a follow-up answer."""
+    """Handle greetings, abusive text, complaints, and follow-up answers."""
     text = (user_text or "").strip()
-
     if not text:
         return
 
-    active_complaint = get_latest_active_complaint(conversation)
+    # Greetings must never create complaints, even if AI misclassifies them.
+    if is_simple_greeting(text):
+        send_bot_message(
+            conversation,
+            "Hello! I'm JEMI. I can help you report public problems such as "
+            "damaged dustbins, overflowing waste bins, broken streetlights, "
+            "or damaged roads. Please describe the problem you noticed.",
+        )
+        return
 
     try:
         analysis = analyze_complaint_text(text)
@@ -193,21 +187,39 @@ def process_complaint_text(conversation, user_text):
         )
         return
 
-    # A follow-up to an existing complaint should not create a new one.
-    if active_complaint:
-        warn_about_language(active_complaint, analysis)
+    active_complaint = get_latest_active_complaint(conversation)
 
+    # Handle abusive messages before processing complaint details or location.
+    if analysis.get("abusive_language"):
+        complaint_for_warning = active_complaint or (
+            Complaint.objects.filter(conversation=conversation)
+            .order_by("-created_at")
+            .first()
+        )
+
+        if complaint_for_warning:
+            complaint_for_warning.language_warning_count += 1
+            complaint_for_warning.save(
+                update_fields=["language_warning_count", "updated_at"]
+            )
+
+        send_bot_message(
+            conversation,
+            "Please keep the conversation respectful. "
+            "If you need to report a public problem, "
+            "please describe the issue clearly.",
+        )
+        return
+
+    # Continue an existing complaint that needs more information.
+    if active_complaint:
         if active_complaint.status == Complaint.Status.NEEDS_INFO:
-            # This stage asks the user to provide the missing location.
-            # Do not invent or infer the location.
             location = (analysis.get("location") or "").strip()
 
             if not location:
-                # A plain-text answer may itself be a location, even when
-                # it isn't a complete complaint sentence.
                 location = text
 
-            active_complaint.location = location
+            active_complaint.location = location[:255]
             active_complaint.status = Complaint.Status.PENDING_REVIEW
             active_complaint.save(
                 update_fields=["location", "status", "updated_at"]
@@ -216,7 +228,8 @@ def process_complaint_text(conversation, user_text):
             send_bot_message(
                 conversation,
                 "Thank you! Your complaint has been submitted for review.\n"
-                f"Complaint ID: CMP-{active_complaint.complaint_id.hex[:10].upper()}\n"
+                f"Complaint ID: "
+                f"CMP-{active_complaint.complaint_id.hex[:10].upper()}\n"
                 "An administrator will review the complaint and its evidence.",
             )
             return
@@ -238,71 +251,17 @@ def process_complaint_text(conversation, user_text):
             )
             return
 
-    
-        # No active complaint: determine whether this is a complaint.
-        # Handle abusive language before sending the default welcome message.
-        if analysis.get("abusive_language"):
-            latest_complaint = (
-                Complaint.objects.filter(conversation=conversation)
-                .order_by("-created_at")
-                .first()
-            )
-
-            if latest_complaint:
-                latest_complaint.language_warning_count += 1
-                latest_complaint.save(
-                    update_fields=["language_warning_count", "updated_at"]
-                )
-
-            send_bot_message(
-                conversation,
-                "Please keep the conversation respectful. "
-                "If you need to report another public problem, "
-                "please describe the issue clearly."
-            )
-            return
-
-        if not analysis.get("is_complaint"):
-            send_bot_message(
-                conversation,
-                "Hello! I can help you report public problems such as "
-                "damaged dustbins, overflowing waste bins, broken streetlights, "
-                "or damaged roads. Please describe the problem you noticed."
-            )
-            return
-
-        description = (analysis.get("description") or text).strip()
-
-        if not description:
-            send_bot_message(
-                conversation,
-                "Please describe the problem so I can register your complaint."
-            )
-            return
-
-        complaint = Complaint.objects.create(
-            conversation=conversation,
-            category=(analysis.get("category") or "General")[:100],
-            description=description,
-            location=(analysis.get("location") or "")[:255],
-            additional_details=analysis.get("additional_details") or "",
-            status=Complaint.Status.AWAITING_PHOTO,
-        )
-
-        warn_about_language(complaint, analysis)
-
+    # No complaint needs a follow-up. Check whether this is a new complaint.
+    if not analysis.get("is_complaint"):
         send_bot_message(
             conversation,
-            "I've started your complaint.\n"
-            f"Complaint ID: CMP-{complaint.complaint_id.hex[:10].upper()}\n"
-            f"Problem: {complaint.description}\n\n"
-            "Please send a clear photo showing the reported problem."
+            "Hello! I can help you report public problems such as "
+            "damaged dustbins, overflowing waste bins, broken streetlights, "
+            "or damaged roads. Please describe the problem you noticed.",
         )
-
         return
 
     description = (analysis.get("description") or text).strip()
-
     if not description:
         send_bot_message(
             conversation,
@@ -319,16 +278,14 @@ def process_complaint_text(conversation, user_text):
         status=Complaint.Status.AWAITING_PHOTO,
     )
 
-    warn_about_language(complaint, analysis)
-
     send_bot_message(
         conversation,
         "I've started your complaint.\n"
         f"Complaint ID: CMP-{complaint.complaint_id.hex[:10].upper()}\n"
         f"Problem: {complaint.description}\n\n"
         "Please send a clear photo showing the reported problem. "
-        "For example, if you reported a cracked dustbin, the photo "
-        "should show that dustbin.",
+        "For example, if you reported a cracked dustbin, "
+        "the photo should show that dustbin.",
     )
 
 
@@ -369,11 +326,11 @@ def process_complaint_photo(conversation, file_id):
         complaint.evidence_notes = notes
 
         if result == "valid":
-            if complaint.location.strip():
-                complaint.status = Complaint.Status.PENDING_REVIEW
-            else:
-                complaint.status = Complaint.Status.NEEDS_INFO
-
+            complaint.status = (
+                Complaint.Status.PENDING_REVIEW
+                if complaint.location.strip()
+                else Complaint.Status.NEEDS_INFO
+            )
             complaint.save(
                 update_fields=[
                     "evidence_file_id",
@@ -394,7 +351,8 @@ def process_complaint_photo(conversation, file_id):
                     "Your photo appears relevant to the reported problem. "
                     "Your complaint has been submitted for administrator "
                     "review.\n"
-                    f"Complaint ID: CMP-{complaint.complaint_id.hex[:10].upper()}"
+                    f"Complaint ID: "
+                    f"CMP-{complaint.complaint_id.hex[:10].upper()}"
                 )
 
             if notes:
@@ -421,7 +379,7 @@ def process_complaint_photo(conversation, file_id):
                 + (f"\nPhoto check: {notes}" if notes else ""),
             )
 
-        else:  # unclear
+        else:
             complaint.status = Complaint.Status.AWAITING_PHOTO
             complaint.save(
                 update_fields=[
@@ -444,7 +402,6 @@ def process_complaint_photo(conversation, file_id):
     except Exception:
         logger.exception("Photo validation failed")
 
-        # Do not mark an unverified photo as valid or invalid.
         complaint.evidence_result = Complaint.EvidenceResult.ERROR
         complaint.evidence_notes = (
             "Automatic validation could not be completed. "
@@ -468,10 +425,7 @@ def process_complaint_photo(conversation, file_id):
 
 
 def process_incoming_message(saved_message):
-    """
-    Entry point called by the existing Telegram webhook after
-    it saves and broadcasts an incoming TelegramMessage.
-    """
+    """Process an incoming Telegram message after it is saved and broadcast."""
     if saved_message.direction != TelegramMessage.INCOMING:
         return
 
