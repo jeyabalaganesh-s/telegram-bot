@@ -30,25 +30,34 @@ def analyze_complaint_text(user_text):
             {
                 "role": "system",
                 "content": """
-You are an assistant for a public complaint management system.
+You are JEMI, an assistant for a public complaint management system.
 
-Return JSON with these keys:
+Return a JSON object with these keys:
 {
-  "is_complaint": true,
-  "category": "short category",
-  "description": "clear description of the reported problem",
-  "location": "location if explicitly provided, otherwise empty",
-  "additional_details": "other useful details",
+  "is_complaint": false,
+  "category": "",
+  "description": "",
+  "location": "",
+  "additional_details": "",
   "abusive_language": false
 }
 
 Rules:
+- A genuine report of a damaged or broken item is a complaint.
+- Examples include damaged dustbins, broken streetlights,
+  damaged roads, broken chairs, and overflowing waste bins.
+- A short greeting such as "Hi", "Hello", or "Hey" is not a complaint.
+- Thanks, casual conversation, and ordinary questions are not complaints.
+- Do not classify a message as a complaint just because it mentions an object.
 - Never invent facts or locations.
+- Extract a location only if the user explicitly provides one.
+- Put the main problem in description.
+- Put follow-up details or specific damage in additional_details
+  when appropriate.
 - Distinguish ordinary frustration from abusive language.
 - Set abusive_language to true for insults, harassment, or
   abusive expressions directed at a person or service.
 - Do not reject a genuine complaint merely because the user is angry.
-- If the message is not a complaint, set is_complaint to false.
 - Return valid JSON only.
 """,
             },
@@ -74,7 +83,12 @@ def validate_complaint_photo(
     image_bytes,
     mime_type="image/jpeg",
 ):
-    """Check whether a photo visually supports a complaint."""
+    """
+    Check whether an image is consistent with the reported problem.
+
+    The description should include the original complaint and any
+    additional details supplied by the user.
+    """
     client = get_client()
     model = getattr(settings, "OPENAI_MODEL", "gpt-4.1-mini")
 
@@ -88,24 +102,60 @@ def validate_complaint_photo(
             {
                 "role": "system",
                 "content": """
-You validate photo evidence for public complaints.
+You are JEMI's photo-evidence assessment assistant.
 
-Return JSON:
+Your task is to decide whether a submitted photo is relevant to
+the problem described by the user.
+
+Return JSON in this exact structure:
 {
   "result": "valid",
-  "notes": "brief explanation"
+  "notes": "Brief explanation of the visible evidence."
 }
 
 The result must be exactly one of:
-- valid: the visible image clearly supports the complaint
-- invalid: the image is unrelated to the reported problem
-- unclear: the image is too blurry, dark, distant, or ambiguous
-  to make a reliable decision
+- valid
+- invalid
+- unclear
 
-Do not claim the photo proves facts that cannot be seen.
-Do not infer the location or identity of the photographer.
-If uncertain, choose unclear.
-Return valid JSON only.
+Decision rules:
+
+1. VALID:
+   The image shows the object or scene described in the complaint,
+   and the visible evidence is reasonably consistent with the reported
+   problem. Accept a relevant image even if the exact damage is subtle,
+   partially hidden, or not perfectly visible.
+
+2. INVALID:
+   The image is clearly unrelated to the reported complaint.
+   For example, a photo of a road is submitted for a complaint about
+   a broken office chair, with no relevant connection.
+
+3. UNCLEAR:
+   The image is too blurry, dark, distant, or obstructed to determine
+   whether it is relevant, or the complaint lacks enough detail to
+   make a reasonable comparison.
+
+Additional rules:
+- Consider the entire complaint context, including the original
+  description, category, and any follow-up details.
+- A follow-up such as "the chair handle is broken and missing"
+  is important evidence context even if the original description
+  only says "damaged chair."
+- If the photo shows the correct object and the reported damage is
+  plausible, do not reject it merely because every detail cannot
+  be seen clearly.
+- A torn, cracked, broken, or visibly damaged object can support
+  a complaint about that object when the details are consistent.
+- Do not require proof of the exact location from the image.
+- Do not infer the identity of the photographer or claim facts
+  that are not visible.
+- Do not automatically accept every image. Clearly unrelated images
+  should be marked invalid.
+- Be fair and practical. This is preliminary evidence screening,
+  not a final administrative decision.
+- Keep notes short, factual, and respectful.
+- Return valid JSON only.
 """,
             },
             {
@@ -113,7 +163,11 @@ Return valid JSON only.
                 "content": [
                     {
                         "type": "text",
-                        "text": f"Complaint description: {description}",
+                        "text": (
+                            "Review the following complaint context and "
+                            "compare it with the attached photo:\n\n"
+                            f"{description}"
+                        ),
                     },
                     {
                         "type": "image_url",
@@ -136,5 +190,8 @@ Return valid JSON only.
 
     if result.get("result") not in {"valid", "invalid", "unclear"}:
         raise ValueError("AI returned an unsupported evidence result")
+
+    if not isinstance(result.get("notes", ""), str):
+        raise ValueError("AI returned invalid evidence notes")
 
     return result

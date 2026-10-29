@@ -312,8 +312,16 @@ def process_complaint_photo(conversation, file_id):
     try:
         image_bytes, mime_type = download_telegram_photo(file_id)
 
+        # Combine the original complaint and all follow-up details.
+        complaint_context = (
+            f"Reported problem: {complaint.description}\n"
+            f"Category: {complaint.category}\n"
+            f"Additional details: {complaint.additional_details or 'None'}\n"
+            f"Location: {complaint.location or 'Not provided'}"
+        )
+
         validation = validate_complaint_photo(
-            complaint.description,
+            complaint_context,
             image_bytes,
             mime_type,
         )
