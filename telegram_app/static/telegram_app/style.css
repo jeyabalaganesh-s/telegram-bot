@@ -594,3 +594,32 @@ footer {
     }
 }
 
+
+.message-media {
+    margin-top: 10px;
+}
+
+.message-media img {
+    display: block;
+    max-width: 100%;
+    width: auto;
+    max-height: 350px;
+    object-fit: contain;
+    border-radius: 10px;
+}
+
+.message-media video {
+    display: block;
+    width: 100%;
+    max-width: 420px;
+    border-radius: 10px;
+}
+
+.message-media audio {
+    display: block;
+    max-width: 100%;
+}
+
+.message-media a {
+    overflow-wrap: anywhere;
+}

@@ -264,7 +264,53 @@
                             {% endif %}
                         </strong>
 
-                        <p class="message-content">{{ message.text }}</p>
+                       
+{% if message.text %}
+    <p class="message-content">{{ message.text }}</p>
+{% endif %}
+
+{% if message.telegram_file_id %}
+    <div class="message-media">
+        {% if message.media_type == "photo" %}
+            <a href="{% url 'telegram_media' message.id %}" target="_blank" rel="noopener">
+                <img
+                    src="{% url 'telegram_media' message.id %}"
+                    alt="Telegram photo"
+                    loading="lazy"
+                >
+            </a>
+
+        {% elif message.media_type == "video" or message.media_type == "animation" or message.media_type == "video_note" %}
+            <video controls preload="metadata">
+                <source src="{% url 'telegram_media' message.id %}">
+                Your browser does not support video playback.
+            </video>
+
+        {% elif message.media_type == "audio" or message.media_type == "voice" %}
+            <audio controls preload="metadata">
+                <source src="{% url 'telegram_media' message.id %}">
+                Your browser does not support audio playback.
+            </audio>
+
+        {% elif message.media_type == "sticker" %}
+            <img
+                src="{% url 'telegram_media' message.id %}"
+                alt="Telegram sticker"
+                loading="lazy"
+            >
+
+        {% elif message.media_type == "document" %}
+            <a
+                href="{% url 'telegram_media' message.id %}"
+                target="_blank"
+                rel="noopener"
+            >
+                View or download attachment
+            </a>
+        {% endif %}
+    </div>
+{% endif %}
+
 
                         <small class="message-date">
                             {{ message.created_at|date:"d M Y, H:i" }}
