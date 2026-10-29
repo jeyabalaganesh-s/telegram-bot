@@ -8,15 +8,271 @@
 
     <title>JEMI | Conversations</title>
 
-    <link
-        rel="stylesheet"
-        href="{% static 'telegram_app/style.css' %}"
-    >
+    <link rel="stylesheet" href="{% static 'telegram_app/style.css' %}">
 
-    <script
-        src="{% static 'telegram_app/conversations.js' %}"
-        defer
-    ></script>
+    <script src="{% static 'telegram_app/conversations.js' %}" defer></script>
+
+    <style>
+        /* Page layout */
+        .main {
+            min-width: 0;
+            min-height: 100vh;
+            padding: 30px;
+            background: #f5f7fb;
+        }
+
+        .topbar {
+            margin-bottom: 28px;
+        }
+
+        .topbar h1 {
+            font-size: 27px;
+            font-weight: 700;
+            color: #172033;
+        }
+
+        .topbar p {
+            margin-top: 7px;
+            color: #8994a7;
+            font-size: 14px;
+        }
+
+        /* Bot status */
+        .bot-badge {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 11px 15px;
+            border: 1px solid #e6eaf1;
+            border-radius: 12px;
+            background: #fff;
+            color: #334155;
+            white-space: nowrap;
+        }
+
+        /* Conversation panel */
+        .conversations-panel {
+            padding: 0 !important;
+            margin: 0 !important;
+            overflow: hidden;
+            background: #fff;
+            border: 1px solid #e8ecf3;
+            border-radius: 16px;
+            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.025);
+        }
+
+        .conversations-panel .panel-header {
+            padding: 22px 24px;
+            border-bottom: 1px solid #edf0f5;
+        }
+
+        .conversations-panel .panel-header h2 {
+            font-size: 18px;
+            font-weight: 650;
+        }
+
+        .conversations-panel .panel-header p {
+            margin-top: 6px;
+            color: #8994a7;
+            font-size: 13px;
+        }
+
+        /* Conversation list */
+        #conversation-list {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #conversation-list .conversation-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 18px 24px;
+            color: #172033;
+            text-decoration: none;
+            border-bottom: 1px solid #f0f2f6;
+            background: #fff;
+            transition: background 0.18s ease;
+        }
+
+        #conversation-list .conversation-item:last-child {
+            border-bottom: none;
+        }
+
+        #conversation-list .conversation-item:hover {
+            background: #f5f9ff;
+        }
+
+        /* Avatar */
+        #conversation-list .conversation-avatar {
+            width: 48px;
+            height: 48px;
+            flex-shrink: 0;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            background: #eaf4ff;
+            color: #1875c5;
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        /* Conversation details */
+        #conversation-list .conversation-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        #conversation-list .conversation-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #conversation-list .conversation-heading strong {
+            font-size: 15px;
+            font-weight: 650;
+            overflow-wrap: anywhere;
+        }
+
+        #conversation-list .conversation-time {
+            flex-shrink: 0;
+            color: #8994a7;
+            font-size: 12px;
+        }
+
+        #conversation-list .conversation-username {
+            margin-top: 5px;
+            color: #2688d9;
+            font-size: 12px;
+        }
+
+        #conversation-list .conversation-preview {
+            margin-top: 7px;
+            color: #68758b;
+            font-size: 13px;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+        }
+
+        #conversation-list .conversation-chat-id {
+            display: inline-block;
+            margin-top: 7px;
+            color: #8994a7;
+            font-size: 11px;
+        }
+
+        /* Empty state */
+        #conversation-list .empty-state {
+            padding: 64px 20px;
+            text-align: center;
+        }
+
+        #conversation-list .empty-icon {
+            width: 56px;
+            height: 56px;
+            display: grid;
+            place-items: center;
+            margin: 0 auto 18px;
+            border-radius: 16px;
+            background: #eaf4ff;
+            color: #2688d9;
+            font-size: 24px;
+        }
+
+        #conversation-list .empty-state h3 {
+            color: #172033;
+            font-size: 17px;
+        }
+
+        #conversation-list .empty-state p {
+            margin: 9px 0 18px;
+            color: #8994a7;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        #conversation-list .empty-state a {
+            display: inline-block;
+            padding: 11px 17px;
+            border-radius: 9px;
+            background: #2688d9;
+            color: #fff;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        #conversation-list .empty-state a:hover {
+            background: #1875c5;
+        }
+
+        /* Footer */
+        .main footer {
+            padding-top: 24px;
+            color: #98a1b1;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        /* Responsive */
+        @media (max-width: 760px) {
+            .main {
+                padding: 22px 14px;
+            }
+
+            .topbar {
+                gap: 14px;
+                margin-bottom: 22px;
+            }
+
+            .topbar h1 {
+                font-size: 23px;
+            }
+
+            .conversations-panel .panel-header {
+                padding: 18px;
+            }
+
+            #conversation-list .conversation-item {
+                gap: 12px;
+                padding: 15px 18px;
+            }
+
+            #conversation-list .conversation-avatar {
+                width: 42px;
+                height: 42px;
+            }
+
+            #conversation-list .conversation-heading {
+                align-items: flex-start;
+            }
+
+            #conversation-list .conversation-time {
+                font-size: 11px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main {
+                padding: 18px 10px;
+            }
+
+            .bot-badge {
+                padding: 9px 11px;
+                font-size: 12px;
+            }
+
+            #conversation-list .conversation-item {
+                padding: 14px 12px;
+            }
+
+            #conversation-list .conversation-chat-id {
+                font-size: 10px;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -24,10 +280,8 @@
 
     <!-- Sidebar -->
     <aside class="sidebar">
-
         <div class="brand">
             <div class="brand-icon">J</div>
-
             <div>
                 <h2>JEMI</h2>
                 <p>Telegram Dashboard</p>
@@ -44,23 +298,19 @@
             </a>
         </nav>
 
-        <!-- Logout -->
         <div class="sidebar-logout">
             <form method="post" action="{% url 'logout' %}">
                 {% csrf_token %}
-
                 <button type="submit" class="logout-button">
                     ⇥ &nbsp; Logout
                 </button>
             </form>
         </div>
 
-        <!-- WebSocket status -->
         <div class="sidebar-bottom">
             <span class="status-dot" id="connection-dot"></span>
             <span id="connection-status">Connecting...</span>
         </div>
-
     </aside>
 
     <!-- Main content -->
@@ -79,7 +329,7 @@
         </header>
 
         <!-- Conversation list -->
-        <section class="messages-panel" style="margin-top: 32px;">
+        <section class="messages-panel conversations-panel">
 
             <div class="panel-header">
                 <div>
@@ -104,9 +354,7 @@
 
                     <div class="conversation-details">
                         <div class="conversation-heading">
-                            <strong>
-                                {{ conversation.display_name }}
-                            </strong>
+                            <strong>{{ conversation.display_name }}</strong>
 
                             <span class="conversation-time">
                                 {% with last_message=conversation.messages.last %}
@@ -129,7 +377,10 @@
                                     {% if last_message.direction == "outgoing" %}
                                         You:
                                     {% endif %}
-                                    {{ last_message.text|truncatechars:75 }}
+                                    {% if last_message.media_type != "text" %}
+                                        📎
+                                    {% endif %}
+                                    {{ last_message.text|default:"Media attachment"|truncatechars:75 }}
                                 {% else %}
                                     Start a conversation
                                 {% endif %}
@@ -161,7 +412,6 @@
                 {% endfor %}
 
             </div>
-
         </section>
 
         <footer>
@@ -172,3 +422,4 @@
 </div>
 </body>
 </html>
+    

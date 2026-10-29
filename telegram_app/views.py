@@ -219,7 +219,7 @@ def telegram_webhook(request):
 # Serve media securely
 # ==============================
 
-@login_required(login_url="/accounts/login/")
+@login_required(login_url="/")
 def telegram_media(request, message_id):
     """Retrieve a Telegram file without exposing the bot token to the browser."""
 
@@ -306,7 +306,7 @@ def telegram_media(request, message_id):
 # Conversation list
 # ==============================
 
-@login_required(login_url="/accounts/login/")
+@login_required(login_url="/")
 def conversations(request):
     items = TelegramConversation.objects.prefetch_related(
         "messages"
@@ -324,7 +324,7 @@ def conversations(request):
 # ==============================
 
 
-@login_required(login_url="/accounts/login/")
+@login_required(login_url="/")
 def telegram_chat(request, chat_id):
     conversation = get_object_or_404(
         TelegramConversation,
@@ -353,7 +353,7 @@ def telegram_chat(request, chat_id):
 # Send Telegram text message
 # ==============================
 
-@login_required(login_url="/accounts/login/")
+@login_required(login_url="/")
 @require_POST
 def send_telegram_message(request, chat_id):
     conversation = get_object_or_404(
@@ -454,7 +454,7 @@ def send_telegram_message(request, chat_id):
         },
     })
 @csrf_exempt
-@login_required(login_url="/accounts/login/")
+@login_required(login_url="/")
 @require_POST
 def send_telegram_media(request, chat_id):
     """Upload media from JEMI and send it to a Telegram chat."""
