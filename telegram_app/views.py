@@ -602,3 +602,32 @@ def send_telegram_media(request, chat_id):
             "created_at": saved_message.created_at.isoformat(),
         },
     })
+
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+
+
+def broadcast_telegram_message(message):
+    conversation = message.conversation
+
+    payload = {
+        "id": message.id,
+        "chat_id": conversation.chat_id,
+        "display_name": conversation.display_name,
+        "username": conversation.username,
+        "direction": message.direction,
+        "text": message.text or "",
+        "media_type": message.media_type,
+        "created_at": message.created_at.isoformat(),
+    }
+
+    channel_layer = get_channel_layer()
+
+    if channel_layer is not None:
+        async_to_sync(channel_layer.group_send)(
+            "telegram_updates",
+            {
+                "type": "telegram.message",
+                "data": payload,
+            },
+        )
