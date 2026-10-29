@@ -17,7 +17,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from .models import TelegramConversation, TelegramMessage
-
+from django.views.decorators.http import require_POST
+from django.core.files.uploadedfile import UploadedFile
 
 logger = logging.getLogger(__name__)
 
@@ -322,6 +323,7 @@ def conversations(request):
 # Individual chat
 # ==============================
 
+
 @login_required(login_url="/accounts/login/")
 def telegram_chat(request, chat_id):
     conversation = get_object_or_404(
@@ -331,14 +333,20 @@ def telegram_chat(request, chat_id):
 
     messages = conversation.messages.all()
 
+    conversations = TelegramConversation.objects.prefetch_related(
+        "messages"
+    ).all()
+
     return render(
         request,
         "telegram_app/chat.html",
         {
             "conversation": conversation,
             "messages": messages,
+            "conversations": conversations,
         },
     )
+
 
 
 # ==============================
@@ -442,6 +450,155 @@ def send_telegram_message(request, chat_id):
             "text": saved_message.text,
             "direction": saved_message.direction,
             "media_type": saved_message.media_type,
+            "created_at": saved_message.created_at.isoformat(),
+        },
+    })
+@csrf_exempt
+@login_required(login_url="/accounts/login/")
+@require_POST
+def send_telegram_media(request, chat_id):
+    """Upload media from JEMI and send it to a Telegram chat."""
+
+    conversation = get_object_or_404(
+        TelegramConversation,
+        chat_id=chat_id,
+    )
+
+    uploaded_file = request.FILES.get("file")
+    caption = request.POST.get("caption", "").strip()
+
+    if not uploaded_file:
+        return JsonResponse(
+            {"ok": False, "error": "Please select a file."},
+            status=400,
+        )
+
+    # Keep uploads within a reasonable size for the dashboard.
+    max_size = 20 * 1024 * 1024  # 20 MB
+    if uploaded_file.size > max_size:
+        return JsonResponse(
+            {"ok": False, "error": "File size must not exceed 20 MB."},
+            status=400,
+        )
+
+    if len(caption) > 1024:
+        return JsonResponse(
+            {"ok": False, "error": "Caption must be 1024 characters or fewer."},
+            status=400,
+        )
+
+    token = getattr(settings, "TELEGRAM_BOT_TOKEN", "")
+    if not token:
+        return JsonResponse(
+            {"ok": False, "error": "Telegram bot token is not configured."},
+            status=500,
+        )
+
+    content_type = (
+        getattr(uploaded_file, "content_type", None)
+        or mimetypes.guess_type(uploaded_file.name)[0]
+        or "application/octet-stream"
+    ).lower()
+
+    # Select the Telegram Bot API method.
+    if content_type.startswith("image/"):
+        media_type = "photo"
+        api_method = "sendPhoto"
+        file_field = "photo"
+    elif content_type.startswith("video/"):
+        media_type = "video"
+        api_method = "sendVideo"
+        file_field = "video"
+    elif content_type.startswith("audio/"):
+        media_type = "audio"
+        api_method = "sendAudio"
+        file_field = "audio"
+    else:
+        media_type = "document"
+        api_method = "sendDocument"
+        file_field = "document"
+
+    api_url = f"https://api.telegram.org/bot{token}/{api_method}"
+
+    try:
+        uploaded_file.seek(0)
+
+        response = requests.post(
+            api_url,
+            data={
+                "chat_id": conversation.chat_id,
+                "caption": caption,
+            },
+            files={
+                file_field: (
+                    uploaded_file.name,
+                    uploaded_file,
+                    content_type,
+                )
+            },
+            timeout=60,
+        )
+
+        result = response.json()
+
+    except (requests.RequestException, ValueError):
+        logger.exception("Telegram media upload failed")
+        return JsonResponse(
+            {"ok": False, "error": "Could not upload media to Telegram."},
+            status=502,
+        )
+
+    if not response.ok or not result.get("ok"):
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": result.get(
+                    "description",
+                    "Telegram rejected the media.",
+                ),
+            },
+            status=502,
+        )
+
+    telegram_message = result["result"]
+
+    # Telegram returns the file_id for the uploaded media.
+    returned_file_id = ""
+    returned_media_type = media_type
+
+    media_object = telegram_message.get(file_field)
+
+    if media_type == "photo":
+        photos = telegram_message.get("photo", [])
+        if photos:
+            returned_file_id = photos[-1]["file_id"]
+    elif isinstance(media_object, dict):
+        returned_file_id = media_object.get("file_id", "")
+
+    # Save the actual Telegram message ID, not the local database ID.
+    saved_message = TelegramMessage.objects.create(
+        conversation=conversation,
+        direction=TelegramMessage.OUTGOING,
+        text=telegram_message.get("caption") or caption,
+        telegram_message_id=telegram_message.get("message_id"),
+        media_type=returned_media_type,
+        telegram_file_id=returned_file_id,
+    )
+
+    broadcast_message(saved_message)
+
+    return JsonResponse({
+        "ok": True,
+        "message": {
+            "id": saved_message.id,
+            "chat_id": conversation.chat_id,
+            "text": saved_message.text,
+            "direction": saved_message.direction,
+            "media_type": saved_message.media_type,
+            "media_url": (
+                reverse("telegram_media", args=[saved_message.id])
+                if returned_file_id else None
+            ),
             "created_at": saved_message.created_at.isoformat(),
         },
     })

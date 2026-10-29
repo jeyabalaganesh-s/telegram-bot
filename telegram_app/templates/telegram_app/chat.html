@@ -203,6 +203,49 @@
         </div>
 
     </aside>
+    
+<!-- Conversation list -->
+<aside class="conversation-sidebar">
+    <div class="conversation-header">
+        <h2>Messages</h2>
+        <p>Your Telegram conversations</p>
+    </div>
+
+    <div class="conversation-list">
+        {% for item in conversations %}
+            <a
+                href="{% url 'telegram_chat' item.chat_id %}"
+                class="conversation-item {% if item.chat_id == conversation.chat_id %}selected{% endif %}"
+            >
+                <div class="conversation-avatar">
+                    {{ item.display_name|slice:":1"|upper }}
+                </div>
+
+                <div class="conversation-info">
+                    <strong>{{ item.display_name }}</strong>
+
+                    {% with latest=item.messages.last %}
+                        {% if latest %}
+                            <p>
+                                {% if latest.media_type != "text" %}
+                                    📎
+                                {% endif %}
+                                {{ latest.text|default:"Media attachment"|truncatechars:38 }}
+                            </p>
+                        {% else %}
+                            <p>No messages yet</p>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+            </a>
+        {% empty %}
+            <p class="no-conversations">
+                No conversations yet.
+            </p>
+        {% endfor %}
+    </div>
+</aside>
+
 
     <!-- Main chat content -->
     <main class="main">
@@ -325,31 +368,44 @@
                 {% endfor %}
             </div>
 
-            <!-- Send message -->
-            <form
-                id="send-message-form"
-                class="chat-composer"
-                data-send-url="{% url 'send_telegram_message' conversation.chat_id %}"
-            >
-                {% csrf_token %}
+            
+<form
+    id="send-message-form"
+    class="chat-composer"
+    data-send-url="{% url 'send_telegram_message' conversation.chat_id %}"
+    data-media-url="{% url 'send_telegram_media' conversation.chat_id %}"
+    enctype="multipart/form-data"
+>
+    {% csrf_token %}
 
-                <input
-                    type="text"
-                    id="outgoing-message"
-                    name="text"
-                    placeholder="Write a message..."
-                    maxlength="4096"
-                    autocomplete="off"
-                    aria-label="Message"
-                    required
-                >
+    <label class="attach-button" for="media-file" title="Attach a file">
+        📎
+    </label>
 
-                <button id="send-button" type="submit">
-                    Send
-                </button>
-            </form>
+    <input
+        type="file"
+        id="media-file"
+        accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
+        hidden
+    >
 
-            <p id="send-status" role="status"></p>
+    <input
+        type="text"
+        id="outgoing-message"
+        name="text"
+        placeholder="Write a message..."
+        maxlength="4096"
+        autocomplete="off"
+        aria-label="Message"
+    >
+
+    <button id="send-button" type="submit">
+        Send
+    </button>
+</form>
+
+<p id="selected-file" class="message-date"></p>
+<p id="send-status" role="status"></p>
 
         </section>
 

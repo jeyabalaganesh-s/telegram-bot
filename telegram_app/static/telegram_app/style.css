@@ -623,3 +623,147 @@ footer {
 .message-media a {
     overflow-wrap: anywhere;
 }
+
+/* Three-column messaging layout */
+.app {
+    display: grid;
+    grid-template-columns: 220px 320px minmax(0, 1fr);
+    height: 100vh;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.sidebar {
+    min-width: 0;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+.conversation-sidebar {
+    min-width: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-right: 1px solid #e8edf4;
+    overflow: hidden;
+}
+
+.conversation-header {
+    padding: 24px 18px 18px;
+    border-bottom: 1px solid #edf0f5;
+}
+
+.conversation-header h2 {
+    font-size: 20px;
+    margin: 0;
+}
+
+.conversation-header p {
+    margin-top: 6px;
+    color: #8994a7;
+    font-size: 13px;
+}
+
+.conversation-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.conversation-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    text-decoration: none;
+    color: #243047;
+    border-bottom: 1px solid #f0f2f6;
+    transition: background 0.15s ease;
+}
+
+.conversation-item:hover {
+    background: #f5f8fc;
+}
+
+.conversation-item.selected {
+    background: #eaf4ff;
+    border-left: 3px solid #2688d9;
+    padding-left: 13px;
+}
+
+.conversation-avatar {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #eaf4ff;
+    color: #1875c5;
+    font-weight: 700;
+}
+
+.conversation-info {
+    min-width: 0;
+    flex: 1;
+}
+
+.conversation-info strong {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 14px;
+}
+
+.conversation-info p {
+    margin-top: 5px;
+    color: #8994a7;
+    font-size: 12px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.no-conversations {
+    padding: 20px;
+    color: #8994a7;
+    font-size: 14px;
+}
+
+.main {
+    min-width: 0;
+    height: 100vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.main .chat-layout {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.main #chat-history {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+}
+
+@media (max-width: 1000px) {
+    .app {
+        grid-template-columns: 190px 270px minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 700px) {
+    .app {
+        grid-template-columns: 64px minmax(0, 1fr);
+    }
+
+    .conversation-sidebar {
+        display: none;
+    }
+}

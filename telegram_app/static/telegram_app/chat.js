@@ -21,6 +21,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const chatId = String(history.dataset.chatId || "");
     const sendUrl = form.dataset.sendUrl;
 
+    
+    const fileInput = document.getElementById("media-file");
+    const selectedFileLabel = document.getElementById("selected-file");
+
+    if (fileInput) {
+        fileInput.addEventListener("change", () => {
+            const file = fileInput.files[0];
+
+            if (selectedFileLabel) {
+                selectedFileLabel.textContent = file
+                    ? `Attachment: ${file.name}`
+                    : "";
+            }
+        });
+    }
+
+
     let socket = null;
     let reconnectTimer = null;
     let manuallyClosed = false;
@@ -244,88 +261,95 @@ function addMessage(message) {
     }
 
     // Send a message through Django to Telegram.
+    
     form.addEventListener("submit", async event => {
         event.preventDefault();
 
         const text = input.value.trim();
+        const file = fileInput?.files?.[0];
 
-        if (!text) return;
+        if (!text && !file) return;
 
         if (text.length > 4096) {
-            if (status) {
-                status.textContent =
-                    "Message must be 4096 characters or fewer.";
-            }
+            status.textContent = "Message must be 4096 characters or fewer.";
+            return;
+        }
+
+        if (file && file.size > 20 * 1024 * 1024) {
+            status.textContent = "File size must not exceed 20 MB.";
             return;
         }
 
         button.disabled = true;
         input.disabled = true;
 
-        if (status) {
-            status.textContent = "Sending...";
-        }
+        if (status) status.textContent = file ? "Uploading media..." : "Sending...";
 
         try {
-            const response = await fetch(sendUrl, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": getCsrfToken()
-                },
-                credentials: "same-origin",
-                body: JSON.stringify({ text })
-            });
+            const csrfToken = getCsrfToken();
+            let response;
+            let result;
 
-            const result = await response.json();
+            if (file) {
+                const data = new FormData();
+                data.append("file", file);
+                data.append("caption", text);
 
-            // Supports either response key while your Django view is aligned.
-            if (
-                !response.ok ||
-                !(result.success === true || result.ok === true)
-            ) {
-                throw new Error(
-                    result.error || "Message could not be sent."
-                );
+                response = await fetch(form.dataset.mediaUrl, {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": csrfToken
+                    },
+                    credentials: "same-origin",
+                    body: data
+                });
+            } else {
+                response = await fetch(form.dataset.sendUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrfToken
+                    },
+                    credentials: "same-origin",
+                    body: JSON.stringify({ text })
+                });
             }
 
+            result = await response.json();
+
+            if (!response.ok || result.ok !== true) {
+                throw new Error(result.error || "Message could not be sent.");
+            }
+
+            // WebSocket may already have added this message.
+            // addMessage() should deduplicate using its database ID.
             if (result.message) {
                 addMessage({
                     ...result.message,
-                    id: result.message.id,
-                    chat_id: result.message.chat_id ?? chatId,
-                    direction: "outgoing",
-                    text: result.message.text || text
-                });
-            } else {
-                // Fallback if the view doesn't return a message object.
-                addMessage({
-                    chat_id: chatId,
-                    direction: "outgoing",
-                    text
+                    chat_id: result.message.chat_id ?? chatId
                 });
             }
 
             input.value = "";
 
-            if (status) {
-                status.textContent = "Message sent.";
-            }
+            if (fileInput) fileInput.value = "";
+            if (selectedFileLabel) selectedFileLabel.textContent = "";
+
+            if (status) status.textContent = file
+                ? "Media sent successfully."
+                : "Message sent.";
 
             input.focus();
-        } catch (error) {
-            console.error("Failed to send message:", error);
 
-            if (status) {
-                status.textContent =
-                    error.message || "Something went wrong.";
-            }
+        } catch (error) {
+            console.error("Send failed:", error);
+            if (status) status.textContent = error.message || "Something went wrong.";
         } finally {
             button.disabled = false;
             input.disabled = false;
-            input.focus();
         }
     });
+
 
     // Enter sends a message when using a textarea.
     // Shift+Enter inserts a new line.
