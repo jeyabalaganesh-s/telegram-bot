@@ -20,6 +20,11 @@ from .models import TelegramConversation, TelegramMessage
 from django.views.decorators.http import require_POST
 from django.core.files.uploadedfile import UploadedFile
 
+
+
+from django.views.decorators.http import require_GET
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -453,6 +458,8 @@ def send_telegram_message(request, chat_id):
             "created_at": saved_message.created_at.isoformat(),
         },
     })
+
+
 @csrf_exempt
 @login_required(login_url="/")
 @require_POST
@@ -603,8 +610,6 @@ def send_telegram_media(request, chat_id):
         },
     })
 
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
 
 
 def broadcast_telegram_message(message):
@@ -631,3 +636,43 @@ def broadcast_telegram_message(message):
                 "data": payload,
             },
         )
+
+
+@login_required
+@require_GET
+def dashboard_messages_api(request):
+    # Fetch saved incoming Telegram messages.
+    messages = (
+        TelegramMessage.objects
+        .filter(direction=TelegramMessage.INCOMING)
+        .select_related("conversation")
+        .order_by("-created_at")
+    )
+
+    # Total number saved in the database.
+    total_count = messages.count()
+
+    # Return the most recent 100 messages.
+    recent_messages = messages[:100]
+
+    data = []
+
+    for message in recent_messages:
+        conversation = message.conversation
+
+        data.append({
+            "id": message.id,
+            "chat_id": conversation.chat_id,
+            "display_name": conversation.display_name,
+            "username": conversation.username,
+            "direction": message.direction,
+            "text": message.text or "",
+            "media_type": message.media_type,
+            "created_at": message.created_at.isoformat(),
+        })
+
+    return JsonResponse({
+        "success": True,
+        "total_count": total_count,
+        "messages": data,
+    })

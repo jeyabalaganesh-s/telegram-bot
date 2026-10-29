@@ -25,4 +25,9 @@ urlpatterns = [
         views.send_telegram_media,
         name="send_telegram_media",
     ),
+     path(
+        "dashboard/messages/",
+        views.dashboard_messages_api,
+        name="dashboard_messages_api",
+    ),
 ]
