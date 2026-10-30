@@ -6,8 +6,11 @@ import requests
 from PIL import Image, UnidentifiedImageError
 from django.conf import settings
 
-from ..ai_service import analyze_complaint_text, validate_complaint_photo
-from ..models import Complaint, TelegramMessage
+from telegram_app.ai_service import analyze_complaint_text, validate_complaint_photo
+from telegram_app.models import  TelegramMessage
+
+from complaints.models import Complaint
+
 
 logger = logging.getLogger(__name__)
 TELEGRAM_TIMEOUT = 30
@@ -72,7 +75,7 @@ def send_bot_message(conversation, text):
             telegram_file_id="",
         )
 
-        from ..views import broadcast_message
+        from ...telegram_app.views import broadcast_message
         broadcast_message(saved_message)
         return True
 

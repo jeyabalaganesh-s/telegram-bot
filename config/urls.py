@@ -23,4 +23,6 @@ urlpatterns = [
 
     path("", dashboard, name="dashboard"),
     path("telegram/", include("telegram_app.urls")),
+
+    path("complaints/", include("complaints.urls")),
 ]

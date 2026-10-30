@@ -31,6 +31,12 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
 
 
+LOGIN_URL = "/accounts/login/"
+
+LOGIN_REDIRECT_URL = "/"
+
+LOGOUT_REDIRECT_URL = "/accounts/login/"
+
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv(
@@ -66,6 +72,8 @@ INSTALLED_APPS = [
     "daphne",
     "channels",
     "telegram_app",
+    'complaints',
+
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
